@@ -39,18 +39,26 @@ pnpm dev "explain how DNS works in three sentences"
 
 You'll see a structured `turn` log line (classification, dispatched specialist, tokens, cost, latency) followed by the model's answer.
 
-### Try the Support pack interactively
+### Try the Support and Dev Tools packs interactively
 
-`pnpm dev` loads the Generic pack only. To exercise the Support pack's flows, use the multi-pack driver:
+`pnpm dev` loads the Generic pack only. To exercise the specialized packs, use the multi-pack driver — it loads every shipped pack so single-domain prompts route correctly across them:
 
 ```bash
+# Support (refund, ticket, KB, escalation flows)
 pnpm dev:multi "Please refund \$15 on order ORD-99 — wrong size."
 pnpm dev:multi "What's the status of ticket TKT-12345?"
-pnpm dev:multi "How do I change my account email?"
 pnpm dev:multi "I need a \$250 refund on order ORD-9001 — never arrived."
+
+# Dev Tools (code search, explanation, bug-fix, CI debug)
+pnpm dev:multi "Where is the agentOnlyOrchestratorHook defined?"
+pnpm dev:multi "Explain how the Haiku classifier handles cache misses."
+pnpm dev:multi "Investigate this CI failure: /tmp/build-456.log"
 ```
 
-That last one trips the dollar-limit hook (auto-approve threshold is $20). The response will name human approval rather than a refund ID — proof the hook fired before the tool ran.
+Two of those trip a hook intentionally:
+
+- The `\$250` refund is denied by `dollarLimit({ tool, autoApproveBelow: 20 })`. The response names human approval rather than a refund ID — proof the hook fired before the tool ran.
+- A bug-fix prompt that tries to run `git log` (or anything outside the test-runner allowlist) is denied by `sandboxBashHook`. The deny reason surfaces in the message stream and the specialist either reroutes or stops.
 
 ### Watch a turn unfold in a TUI
 
@@ -65,6 +73,7 @@ pnpm dev:tui "Please refund \$15 on order ORD-99 — wrong size."
 ```bash
 pnpm eval generic          # 20 cases against Haiku, ≥18 to pass
 pnpm eval support          # 25 cases against Haiku, ≥22 to pass
+pnpm eval dev_tools        # 25 cases against Haiku, ≥22 to pass
 ```
 
 Failures print the input, expected `(domain, intent)`, and what the classifier actually returned, so you can see exactly where labels and model disagree.
@@ -105,12 +114,13 @@ console.log(turn.trace);     // TurnRecord — see "Tracing" below
 
 ## Domain packs
 
-A `DomainPack` is a self-contained bundle: intents, specialist `AgentDefinition`s, MCP servers, hooks, and a `route(intent) ⇒ specialist` function. Two packs ship today:
+A `DomainPack` is a self-contained bundle: intents, specialist `AgentDefinition`s, MCP servers, hooks, and a `route(intent) ⇒ specialist` function. Three packs ship today:
 
 | Pack | Intents | Specialists | MCP | Hooks |
 | ---- | ------- | ----------- | --- | ----- |
 | **Generic** | `question`, `task`, `escalate` | `retrieval`, `action`, `escalate` | none — built-in tools only | none |
 | **Support** | `order_status`, `refund_request`, `billing_question`, `complaint`, `account_help` | `ticket_lookup`, `refund_processor`, `kb_search`, `escalate` | in-process `support_stub` (canned responses; production swaps in real Zendesk / Stripe URLs in `pack.mcpServers`) | `piiRedactionHook` (CC/SSN deny), `dollarLimit({ tool, autoApproveBelow })` |
+| **Dev Tools** | `find_code`, `explain_code`, `fix_bug`, `debug_ci` | `codebase_search`, `code_explainer`, `bug_fixer`, `ci_debugger` | none — built-in tools only (`Read`, `Grep`, `Glob`, `Edit`, `Bash`, `WebFetch`) | `secretsScanHook` (AWS/GitHub/sk- key deny), `sandboxBashHook({ allowedCommands })` (Bash limited to test runners) |
 
 Adding your own pack: create `src/packs/<name>/{pack.ts, agents/, prompts/, evals/}` and export a single `DomainPack`. The Core never imports from inside a pack — only the public interface. Per-pack hooks merge into the orchestrator's `Options.hooks` after the built-in invariants and any global hooks.
 
@@ -179,10 +189,12 @@ Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus cross-turn a
 | Validators | `tests/validators.test.ts` | Yes |
 | Support stub MCP | `tests/support-stub.test.ts` | Yes — handlers called directly |
 | Support hooks | `tests/support-hooks.test.ts` | Yes |
+| Dev Tools hooks | `tests/dev-tools-hooks.test.ts` | Yes — pure hook callbacks |
 | Smoke (E2E) | `tests/smoke.test.ts` | No — needs `ANTHROPIC_API_KEY` |
 | Support smoke (E2E) | `tests/support-smoke.test.ts` | No — three real turns, ~$0.15 |
+| Dev Tools smoke (E2E) | `tests/dev-tools-smoke.test.ts` | No — three real turns, ~$0.25; asserts sandbox-bash deny reason in the message stream |
 | Cost-limit (E2E) | `tests/cost-limit-e2e.test.ts` | No — two real turns |
-| Generic + Support evals | `tests/evals.test.ts` | No — ≥18/20 Generic, ≥22/25 Support |
+| Generic + Support + Dev Tools evals | `tests/evals.test.ts` | No — ≥18/20 Generic, ≥22/25 Support, ≥22/25 Dev Tools |
 
 `pnpm test` picks up `ANTHROPIC_API_KEY` from `.env` automatically; the E2E suites un-skip themselves when the key is present.
 
@@ -194,12 +206,13 @@ Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus cross-turn a
 | 2 | Real Haiku classifier, 20 golden eval cases, per-turn `TurnRecord` tracing |
 | 3 | Hooks framework, input validators, cost-limit gate, orchestrator-restriction hook |
 | 4 | Support pack: 5 intents, 4 specialists, in-process MCP stub, PII + dollar-limit hooks, 25 evals, live smoke turns |
+| 5 | Dev Tools pack: 4 intents, 4 specialists, built-in tool surface, sandbox-bash + secrets-scan hooks, 25 evals, live smoke (deny-path asserted in message stream); shared `runPackEvals` helper extracted; Ink TUI driver (`pnpm dev:tui`) |
 
 Up next (`ARCHITECTURE.md` §15):
 
-- **Phase 5** — Dev Tools pack (`codebase_search`, `code_explainer`, `bug_fixer`, `pr_creator`, `ci_debugger`).
-- **Phase 6** — cross-pack composition for genuinely multi-domain queries.
-- **Phase 7** — observability hardening (per-pack dashboards, eval-drop alerting, `guardrailsTriggered` wiring).
+- **Phase 6** — cross-pack composition for genuinely multi-domain queries (e.g. "the refund webhook is broken — find the bug and open a ticket"). The wiring already supports loading multiple packs together; what's missing is end-to-end validation and the orchestrator behavior under multi-domain classifications.
+- **Phase 7** — observability hardening (per-pack dashboards, eval-drop alerting, `guardrailsTriggered` wiring, history/multi-turn extension to the TUI).
+- **Deferred from Phase 5**: `pr_creator` specialist + `protectedBranchGate` hook. These pair with real GitHub API + auth + remote-branch wiring — not a unit of pack architecture. Reintroduce when GitHub MCP wiring lands behind a concrete production deployment.
 
 ## Layout
 
@@ -208,11 +221,12 @@ Follows `ARCHITECTURE.md` §13:
 ```
 src/
 ├── core/           ingress, session, classifier, orchestrator, compose
-├── packs/          DomainPack interface + generic/, support/
+├── packs/          DomainPack interface + generic/, support/, dev-tools/
 ├── tools/          built-in tool name constants
 ├── memory/         session store
 ├── guardrails/     hooks, validators, errors, orchestrator-enforcement
 ├── observability/  log, trace
+├── evals/          shared runPackEvals helper + CLI runner
 ├── cli/            shared run() loop for pnpm dev / pnpm dev:multi
 └── index.ts
 ```
