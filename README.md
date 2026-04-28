@@ -53,12 +53,18 @@ pnpm dev:multi "I need a \$250 refund on order ORD-9001 — never arrived."
 pnpm dev:multi "Where is the agentOnlyOrchestratorHook defined?"
 pnpm dev:multi "Explain how the Haiku classifier handles cache misses."
 pnpm dev:multi "Investigate this CI failure: /tmp/build-456.log"
+
+# Cross-pack composition (one user message that spans multiple packs)
+pnpm dev:multi "The refund webhook is broken — find the bug and open a priority ticket."
+pnpm dev:multi "What's the status of order ORD-99 and explain how DNS works."
 ```
 
-Two of those trip a hook intentionally:
+Two of the single-pack examples trip a hook intentionally:
 
 - The `\$250` refund is denied by `dollarLimit({ tool, autoApproveBelow: 20 })`. The response names human approval rather than a refund ID — proof the hook fired before the tool ran.
 - A bug-fix prompt that tries to run `git log` (or anything outside the test-runner allowlist) is denied by `sandboxBashHook`. The deny reason surfaces in the message stream and the specialist either reroutes or stops.
+
+The cross-pack examples each dispatch more than one specialist in the same turn. The first does it sequentially (bug summary → ticket); the second does it in parallel (independent asks).
 
 ### Watch a turn unfold in a TUI
 
@@ -114,7 +120,7 @@ console.log(turn.trace);     // TurnRecord — see "Tracing" below
 
 ## Domain packs
 
-A `DomainPack` is a self-contained bundle: intents, specialist `AgentDefinition`s, MCP servers, hooks, and a `route(intent) ⇒ specialist` function. Three packs ship today:
+A `DomainPack` is a self-contained bundle: intents, specialist `AgentDefinition`s, MCP servers, hooks, and a `route(intent) ⇒ specialist` function. Three packs ship today, and the orchestrator can compose dispatches across them in a single turn (Phase 6 — see "Cross-pack composition" below):
 
 | Pack | Intents | Specialists | MCP | Hooks |
 | ---- | ------- | ----------- | --- | ----- |
@@ -123,6 +129,16 @@ A `DomainPack` is a self-contained bundle: intents, specialist `AgentDefinition`
 | **Dev Tools** | `find_code`, `explain_code`, `fix_bug`, `debug_ci` | `codebase_search`, `code_explainer`, `bug_fixer`, `ci_debugger` | none — built-in tools only (`Read`, `Grep`, `Glob`, `Edit`, `Bash`, `WebFetch`) | `secretsScanHook` (AWS/GitHub/sk- key deny), `sandboxBashHook({ allowedCommands })` (Bash limited to test runners) |
 
 Adding your own pack: create `src/packs/<name>/{pack.ts, agents/, prompts/, evals/}` and export a single `DomainPack`. The Core never imports from inside a pack — only the public interface. Per-pack hooks merge into the orchestrator's `Options.hooks` after the built-in invariants and any global hooks.
+
+### Cross-pack composition
+
+When a single user message genuinely spans multiple packs ("the refund webhook is broken — find the bug and open a ticket"), the classifier extends its output with an optional `secondary: SecondaryIntent[]` array of additional `(intent, domain, confidence)` triples. The orchestrator surfaces these as `Additional recommendations:` in its planning prompt and decides:
+
+- **Sequential** dispatch when one specialist's output feeds the next (e.g. `dev_tools.bug_fixer` → `support.escalate`). The orchestrator pastes the upstream output into the downstream `Agent` prompt — subagents don't share context.
+- **Parallel** dispatch when the asks are independent (e.g. an order-status check + an explanation). Both `Agent` calls go out in the same assistant message; the SDK runs them concurrently.
+- **Clarify** when a secondary's confidence is below the 0.85 dispatch bar — the orchestrator asks one question rather than guessing.
+
+After every specialist returns, the orchestrator synthesizes a single answer that cites each contributing specialist.
 
 ## How it works
 
@@ -161,7 +177,7 @@ Each call to `nawaitu.run()` returns a `TurnRecord` (also logged at `info`):
 interface TurnRecord {
   sessionId: string;
   turnId: string;                                 // uuid generated per turn
-  classification: IntentResult;                   // { intent, domain, confidence }
+  classification: IntentResult;                   // { intent, domain, confidence, secondary? }
   plan: string[];                                 // specialist names dispatched, in order
   specialists: { name: string; toolCalls: number }[];
   tokensByModel: Record<string, {
@@ -190,10 +206,13 @@ Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus cross-turn a
 | Support stub MCP | `tests/support-stub.test.ts` | Yes — handlers called directly |
 | Support hooks | `tests/support-hooks.test.ts` | Yes |
 | Dev Tools hooks | `tests/dev-tools-hooks.test.ts` | Yes — pure hook callbacks |
+| Cross-pack orchestrator | `tests/cross-pack-orchestrator.test.ts` | Yes — `pickAdditionalRecommendations` + `buildUserMessage` |
 | Smoke (E2E) | `tests/smoke.test.ts` | No — needs `ANTHROPIC_API_KEY` |
 | Support smoke (E2E) | `tests/support-smoke.test.ts` | No — three real turns, ~$0.15 |
 | Dev Tools smoke (E2E) | `tests/dev-tools-smoke.test.ts` | No — three real turns, ~$0.25; asserts sandbox-bash deny reason in the message stream |
+| Cross-pack smoke (E2E) | `tests/cross-pack-smoke.test.ts` | No — one real turn; asserts `dev_tools.bug_fixer` → `support.escalate` dispatch order |
 | Cost-limit (E2E) | `tests/cost-limit-e2e.test.ts` | No — two real turns |
+| Cross-pack classifier (E2E) | `tests/cross-pack-classifier.test.ts` | No — eight live cases, ≥7/8 to pass |
 | Generic + Support + Dev Tools evals | `tests/evals.test.ts` | No — ≥18/20 Generic, ≥22/25 Support, ≥22/25 Dev Tools |
 
 `pnpm test` picks up `ANTHROPIC_API_KEY` from `.env` automatically; the E2E suites un-skip themselves when the key is present.
@@ -207,10 +226,10 @@ Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus cross-turn a
 | 3 | Hooks framework, input validators, cost-limit gate, orchestrator-restriction hook |
 | 4 | Support pack: 5 intents, 4 specialists, in-process MCP stub, PII + dollar-limit hooks, 25 evals, live smoke turns |
 | 5 | Dev Tools pack: 4 intents, 4 specialists, built-in tool surface, sandbox-bash + secrets-scan hooks, 25 evals, live smoke (deny-path asserted in message stream); shared `runPackEvals` helper extracted; Ink TUI driver (`pnpm dev:tui`) |
+| 6 | Cross-pack composition: `IntentResult.secondary` carries cross-pack triples; orchestrator surfaces `Additional recommendations:` with per-entry confidence; `pickAdditionalRecommendations` resolves them into `<pack>.<specialist>` keys; classifier multi-domain detection evals (≥7/8); cross-pack smoke asserts `bug_fixer → escalate` dispatch order. Live verification gated on the next budget reset. |
 
 Up next (`ARCHITECTURE.md` §15):
 
-- **Phase 6** — cross-pack composition for genuinely multi-domain queries (e.g. "the refund webhook is broken — find the bug and open a ticket"). The wiring already supports loading multiple packs together; what's missing is end-to-end validation and the orchestrator behavior under multi-domain classifications.
 - **Phase 7** — observability hardening (per-pack dashboards, eval-drop alerting, `guardrailsTriggered` wiring, history/multi-turn extension to the TUI).
 - **Deferred from Phase 5**: `pr_creator` specialist + `protectedBranchGate` hook. These pair with real GitHub API + auth + remote-branch wiring — not a unit of pack architecture. Reintroduce when GitHub MCP wiring lands behind a concrete production deployment.
 
