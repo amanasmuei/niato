@@ -3,7 +3,25 @@ import {
   type HookCallbackMatcher,
 } from "@anthropic-ai/claude-agent-sdk";
 
-// Placeholder for Phase 3. Mirrors the SDK's `Options.hooks` shape so a
-// caller can pass hooks through createNawaitu now even though Phase 1 does
-// not wire them into the orchestrator yet.
 export type Hooks = Partial<Record<HookEvent, HookCallbackMatcher[]>>;
+
+// Concatenate per-event hook arrays in the order the layers were passed.
+// Earlier layers run first; the SDK short-circuits on the first deny, so
+// order encodes precedence — built-in invariants → globalHooks → pack
+// hooks (per Phase 3 plan §3).
+export function mergeHooks(...layers: Hooks[]): Hooks {
+  const merged: Hooks = {};
+  for (const layer of layers) {
+    for (const [event, matchers] of Object.entries(layer)) {
+      if (matchers.length === 0) continue;
+      const key = event as HookEvent;
+      const existing = merged[key];
+      if (existing === undefined) {
+        merged[key] = [...matchers];
+      } else {
+        existing.push(...matchers);
+      }
+    }
+  }
+  return merged;
+}

@@ -7,6 +7,8 @@ import {
 import { type DomainPack } from "../../packs/DomainPack.js";
 import { type IntentResult } from "../classifier/types.js";
 import { BuiltinTools } from "../../tools/builtin.js";
+import { type Hooks, mergeHooks } from "../../guardrails/hooks.js";
+import { agentOnlyOrchestratorHook } from "../../guardrails/orchestrator-enforcement.js";
 import { ORCHESTRATOR_PROMPT } from "./prompt.js";
 
 const ORCHESTRATOR_MODEL = "claude-opus-4-7";
@@ -15,6 +17,7 @@ export interface OrchestratorInput {
   userInput: string;
   classification: IntentResult;
   packs: DomainPack[];
+  hooks?: Hooks;
 }
 
 export interface OrchestratorOutput {
@@ -37,14 +40,6 @@ export function mergePackAgents(
   return merged;
 }
 
-// Phase 1 enforcement of "orchestrator never executes work" is SOFT — the
-// system prompt directs Agent-only dispatch, and `allowedTools` covers every
-// tool any specialist might call so subagent calls auto-approve. The
-// orchestrator could in principle bypass the prompt and call Read/Write
-// directly; nothing here blocks that yet.
-//
-// TODO(phase-3): Harden via a `PreToolUse` hook that blocks any non-`Agent`
-// call where `parent_tool_use_id` is undefined (= top-level orchestrator).
 function unionAllowedTools(packs: DomainPack[]): string[] {
   const tools = new Set<string>([BuiltinTools.Agent]);
   for (const pack of packs) {
@@ -79,6 +74,13 @@ function pickRecommendedSpecialist(input: OrchestratorInput): string | null {
   return specialist === null ? null : `${pack.name}.${specialist}`;
 }
 
+// Built-in `PreToolUse` hook prepended unconditionally — closes Phase 1's
+// soft-enforcement gap. The "orchestrator dispatches only" invariant from
+// ARCHITECTURE.md §5 is now hard-enforced at the SDK permission layer.
+const builtInHooks: Hooks = {
+  PreToolUse: [{ hooks: [agentOnlyOrchestratorHook] }],
+};
+
 export async function runOrchestrator(
   input: OrchestratorInput,
 ): Promise<OrchestratorOutput> {
@@ -89,6 +91,7 @@ export async function runOrchestrator(
     allowedTools: unionAllowedTools(input.packs),
     settingSources: [],
     permissionMode: "default",
+    hooks: mergeHooks(builtInHooks, input.hooks ?? {}),
   };
 
   const messages: SDKMessage[] = [];
