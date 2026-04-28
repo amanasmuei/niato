@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "dev": "tsx --env-file=.env src/cli.ts",
+    "dev:multi": "tsx --env-file=.env src/cli-multi.ts",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
