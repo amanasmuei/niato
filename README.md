@@ -11,7 +11,7 @@ The architecture is a series of declarations before actions: **classify, plan, g
 - **Two-stage routing.** Haiku 4.5 classifies intent before Opus 4.7 plans the dispatch — Opus never burns tokens on triage.
 - **Pluggable domain packs.** Each pack ships its own intents, specialists, MCP tools, hooks, and evals. The shared core composes them.
 - **Real guardrails.** Input validators, a cost-limit gate, and pack-scoped hooks fire *before* tool calls execute — not just as logs.
-- **Auditable by default.** Every turn returns a structured `TurnRecord` with classification, dispatched specialists, tokens by model, cost, and latency.
+- **Auditable by default.** Every turn returns a structured `TurnRecord` with classification, dispatched specialists, tokens by model, cost, latency, and which guardrails fired. Per-session metrics roll up across turns; `onTurnComplete` plugs your own telemetry backend in.
 
 | Layer | Model | Why |
 | ----- | ----- | --- |
@@ -104,11 +104,19 @@ const nawaitu = createNawaitu({
   globalHooks: {
     // your custom org-wide PreToolUse / PostToolUse / Stop hooks
   },
+  onTurnComplete: async (trace) => {
+    // pipe to OTel / Datadog / your time-series store
+    await metrics.record(trace);
+  },
 });
 
 const turn = await nawaitu.run("Please refund $15 on order ORD-99 — wrong size.");
 console.log(turn.result);
 console.log(turn.trace);     // TurnRecord — see "Tracing" below
+
+// Rolling per-session aggregates (turn count, cumulative cost / latency,
+// guardrail-trigger counts, dispatch counts, error count).
+console.log(nawaitu.metrics(turn.session.id));
 ```
 
 `run()` is async, isolated per session, and propagates two typed errors callers can render directly:
@@ -189,11 +197,46 @@ interface TurnRecord {
   costUsd: number;                                // SDK-reported total
   latencyMs: number;                              // wall clock, includes classifier
   outcome: "success" | "error";
-  guardrailsTriggered: string[];                  // hardcoded []; wiring deferred to Phase 7
+  guardrailsTriggered: string[];                  // tool_names denied by any hook this turn
 }
 ```
 
 Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus cross-turn aggregation and `user_id` (added when ingress lands).
+
+## Observability
+
+Three layers, none of which require an external dependency:
+
+**Per-turn `TurnRecord`** — the single-turn shape above. Every `nawaitu.run()` returns it; the `info` log line includes it as a flat JSON object.
+
+**Per-session `SessionMetrics`** — rolling aggregates updated after each turn settles. Read with `nawaitu.metrics(sessionId)`:
+
+```ts
+interface SessionMetrics {
+  turnCount: number;
+  cumulativeCostUsd: number;
+  cumulativeLatencyMs: number;
+  guardrailsTriggered: Record<string, number>;       // tool_name → count
+  dispatchesByPackSpecialist: Record<string, number>; // "support.refund_processor" → count
+  errorCount: number;
+}
+```
+
+**`onTurnComplete` callback** — `(trace: TurnRecord) => void | Promise<void>`. Fires after each turn's trace is built. Wire OTel / Datadog / Honeycomb / your own time-series store from here. Errors thrown by the callback are caught and logged at `warn` level; telemetry never breaks user flows.
+
+OpenTelemetry-style distributed tracing isn't bundled — that's a per-deployment decision. `onTurnComplete` is the integration point.
+
+### Eval regression baselines
+
+Each pack ships a `baseline.json` next to its `cases.jsonl`. CI uses it to catch silent classifier-quality regressions:
+
+```bash
+pnpm eval support --baseline           # asserts current ≥ baseline; non-zero exit on regression
+pnpm eval support --baseline=path.json # custom baseline path (CI artifact stores)
+pnpm eval support --write-baseline     # records the current score as the new baseline
+```
+
+The check is strict: any drop in `passed` count fails. Case-count changes (i.e. someone edited `cases.jsonl`) require an explicit `--write-baseline` rather than silently passing.
 
 ## Testing
 
@@ -207,6 +250,10 @@ Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus cross-turn a
 | Support hooks | `tests/support-hooks.test.ts` | Yes |
 | Dev Tools hooks | `tests/dev-tools-hooks.test.ts` | Yes — pure hook callbacks |
 | Cross-pack orchestrator | `tests/cross-pack-orchestrator.test.ts` | Yes — `pickAdditionalRecommendations` + `buildUserMessage` |
+| Trace guardrails extractor | `tests/trace-guardrails.test.ts` | Yes — synthetic SDK result messages |
+| Session metrics | `tests/metrics.test.ts` | Yes — pure aggregator + lookup |
+| Eval baseline | `tests/eval-baseline.test.ts` | Yes — read/write/check helpers |
+| Classifier schema | `tests/classifier-schema.test.ts` | Yes — locks `zodOutputFormat` shape against Anthropic API constraints |
 | Smoke (E2E) | `tests/smoke.test.ts` | No — needs `ANTHROPIC_API_KEY` |
 | Support smoke (E2E) | `tests/support-smoke.test.ts` | No — three real turns, ~$0.15 |
 | Dev Tools smoke (E2E) | `tests/dev-tools-smoke.test.ts` | No — three real turns, ~$0.25; asserts sandbox-bash deny reason in the message stream |
@@ -227,11 +274,14 @@ Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus cross-turn a
 | 4 | Support pack: 5 intents, 4 specialists, in-process MCP stub, PII + dollar-limit hooks, 25 evals, live smoke turns |
 | 5 | Dev Tools pack: 4 intents, 4 specialists, built-in tool surface, sandbox-bash + secrets-scan hooks, 25 evals, live smoke (deny-path asserted in message stream); shared `runPackEvals` helper extracted; Ink TUI driver (`pnpm dev:tui`) |
 | 6 | Cross-pack composition: `IntentResult.secondary` carries cross-pack triples; orchestrator surfaces `Additional recommendations:` with per-entry confidence; `pickAdditionalRecommendations` resolves them into `<pack>.<specialist>` keys; classifier multi-domain detection evals (≥7/8); cross-pack smoke asserts `bug_fixer → escalate` dispatch order. Live verification gated on the next budget reset. |
+| 7 | Observability: `guardrailsTriggered` wired from `SDKPermissionDenial`; per-session `SessionMetrics` aggregator; pluggable `onTurnComplete(trace)` callback; per-pack eval regression baselines (`--baseline` / `--write-baseline`); `nawaitu.metrics(sessionId)` lookup. |
 
-Up next (`ARCHITECTURE.md` §15):
+Up next:
 
-- **Phase 7** — observability hardening (per-pack dashboards, eval-drop alerting, `guardrailsTriggered` wiring, history/multi-turn extension to the TUI).
+- **Capture eval baselines** — once the API budget resets, run `pnpm eval <pack> --write-baseline` for each pack and commit the `baseline.json` files. CI then enforces no-regression.
+- **TUI multi-turn history** — extend `pnpm dev:tui` from one-turn to a scrollable session view. UX scope, not observability.
 - **Deferred from Phase 5**: `pr_creator` specialist + `protectedBranchGate` hook. These pair with real GitHub API + auth + remote-branch wiring — not a unit of pack architecture. Reintroduce when GitHub MCP wiring lands behind a concrete production deployment.
+- **Distributed tracing** — `onTurnComplete` is the integration point. Adapters (OTel, Datadog) are a per-deployment concern, not bundled into core.
 
 ## Layout
 
