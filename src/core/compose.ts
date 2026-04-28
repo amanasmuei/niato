@@ -6,6 +6,11 @@ import { createHaikuClassifier } from "./classifier/haiku.js";
 import { runOrchestrator } from "./orchestrator/orchestrator.js";
 import { type Hooks, mergeHooks } from "../guardrails/hooks.js";
 import {
+  type InputValidator,
+  maxLengthValidator,
+} from "../guardrails/validators.js";
+import { NawaituInputRejectedError } from "../guardrails/errors.js";
+import {
   InMemorySessionStore,
   type SessionContext,
 } from "../memory/session.js";
@@ -20,6 +25,11 @@ export interface NawaituOptions {
   // pack-scoped hooks; the orchestrator merges built-in invariants → global
   // hooks → pack hooks (in that order) and passes the result to the SDK.
   globalHooks?: Hooks;
+  // Synchronous validators run on the raw user input before classification.
+  // First failure aborts the turn with a NawaituInputRejectedError. Default:
+  // [maxLengthValidator(32_000)]. Pass [] to disable; promptInjectionValidator
+  // is opt-in (false-positive risk varies by domain).
+  inputValidators?: InputValidator[];
   config?: Config;
   logger?: Logger;
 }
@@ -56,9 +66,17 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
     options.globalHooks ?? {},
     ...options.packs.map((p) => p.hooks ?? {}),
   );
+  const validators = options.inputValidators ?? [maxLengthValidator(32_000)];
 
   return {
     async run(userInput, sessionId) {
+      for (const validator of validators) {
+        const result = validator(userInput);
+        if (!result.ok) {
+          throw new NawaituInputRejectedError(result.reason);
+        }
+      }
+
       const session = sessions.getOrCreate(sessionId);
       const turnId = randomUUID();
       const startedAt = Date.now();

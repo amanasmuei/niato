@@ -13,6 +13,15 @@ export type { Config } from "./core/config.js";
 export type { Hooks } from "./guardrails/hooks.js";
 export { mergeHooks } from "./guardrails/hooks.js";
 export { agentOnlyOrchestratorHook } from "./guardrails/orchestrator-enforcement.js";
+export type {
+  InputValidator,
+  InputValidatorResult,
+} from "./guardrails/validators.js";
+export {
+  maxLengthValidator,
+  promptInjectionValidator,
+} from "./guardrails/validators.js";
+export { NawaituInputRejectedError } from "./guardrails/errors.js";
 export type { Logger, LogLevel } from "./observability/log.js";
 export type {
   TurnRecord,
