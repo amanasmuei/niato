@@ -9,3 +9,20 @@ export class NawaituInputRejectedError extends Error {
     this.reason = reason;
   }
 }
+
+// Thrown by `nawaitu.run()` at turn start when a session's cumulative cost
+// has already met or exceeded the configured `costLimitUsd`. The turn is
+// rejected before classification so no further tokens are spent. Mid-turn
+// cost throttling is deferred to Phase 7 — see ARCHITECTURE.md §15.
+export class NawaituBudgetExceededError extends Error {
+  readonly cumulativeUsd: number;
+  readonly limitUsd: number;
+  constructor(cumulativeUsd: number, limitUsd: number) {
+    super(
+      `Session cost limit exceeded: cumulative $${cumulativeUsd.toFixed(4)} ≥ limit $${limitUsd.toFixed(4)}`,
+    );
+    this.name = "NawaituBudgetExceededError";
+    this.cumulativeUsd = cumulativeUsd;
+    this.limitUsd = limitUsd;
+  }
+}

@@ -9,7 +9,10 @@ import {
   type InputValidator,
   maxLengthValidator,
 } from "../guardrails/validators.js";
-import { NawaituInputRejectedError } from "../guardrails/errors.js";
+import {
+  NawaituInputRejectedError,
+  NawaituBudgetExceededError,
+} from "../guardrails/errors.js";
 import {
   InMemorySessionStore,
   type SessionContext,
@@ -30,8 +33,22 @@ export interface NawaituOptions {
   // [maxLengthValidator(32_000)]. Pass [] to disable; promptInjectionValidator
   // is opt-in (false-positive risk varies by domain).
   inputValidators?: InputValidator[];
+  // Per-session cumulative-cost ceiling (USD). Checked at the start of each
+  // run(); the turn is rejected with NawaituBudgetExceededError before any
+  // tokens are spent. Mid-turn throttling is deferred (Phase 7).
+  costLimitUsd?: number;
   config?: Config;
   logger?: Logger;
+}
+
+export function ensureBudget(
+  session: SessionContext,
+  limitUsd: number | undefined,
+): void {
+  if (limitUsd === undefined) return;
+  if (session.cumulativeCostUsd >= limitUsd) {
+    throw new NawaituBudgetExceededError(session.cumulativeCostUsd, limitUsd);
+  }
 }
 
 export interface NawaituTurn {
@@ -78,6 +95,8 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
       }
 
       const session = sessions.getOrCreate(sessionId);
+      ensureBudget(session, options.costLimitUsd);
+
       const turnId = randomUUID();
       const startedAt = Date.now();
 
@@ -106,6 +125,7 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
         messages: orchestratorResult.messages,
         latencyMs: Date.now() - startedAt,
       });
+      session.cumulativeCostUsd += trace.costUsd;
       logger.log("info", "turn", { ...trace });
 
       return {

@@ -21,7 +21,10 @@ export {
   maxLengthValidator,
   promptInjectionValidator,
 } from "./guardrails/validators.js";
-export { NawaituInputRejectedError } from "./guardrails/errors.js";
+export {
+  NawaituInputRejectedError,
+  NawaituBudgetExceededError,
+} from "./guardrails/errors.js";
 export type { Logger, LogLevel } from "./observability/log.js";
 export type {
   TurnRecord,

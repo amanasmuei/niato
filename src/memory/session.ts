@@ -4,6 +4,7 @@ export interface SessionContext {
   id: string;
   createdAt: Date;
   turnCount: number;
+  cumulativeCostUsd: number;
 }
 
 // Phase 1 in-memory store. Real long-term memory arrives in a later phase;
@@ -20,6 +21,7 @@ export class InMemorySessionStore {
       id: id ?? randomUUID(),
       createdAt: new Date(),
       turnCount: 0,
+      cumulativeCostUsd: 0,
     };
     this.sessions.set(session.id, session);
     return session;

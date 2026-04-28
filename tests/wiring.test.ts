@@ -5,12 +5,24 @@ import {
   mergeHooks,
   mergePackAgents,
   stubClassifier,
+  NawaituBudgetExceededError,
   type Config,
   type Hooks,
+  type SessionContext,
 } from "../src/index.js";
 import { loadConfig } from "../src/core/config.js";
+import { ensureBudget } from "../src/core/compose.js";
 
 const noopHook = () => Promise.resolve({ continue: true as const });
+
+function fakeSession(cumulativeCostUsd: number): SessionContext {
+  return {
+    id: "test-session",
+    createdAt: new Date(0),
+    turnCount: 0,
+    cumulativeCostUsd,
+  };
+}
 
 const fakeConfig: Config = {
   ANTHROPIC_API_KEY: "test-key-not-real",
@@ -149,6 +161,42 @@ describe("mergeHooks", () => {
     mergeHooks(a, b);
     expect(a.PreToolUse).toHaveLength(1);
     expect(b.PreToolUse).toHaveLength(1);
+  });
+});
+
+describe("ensureBudget", () => {
+  it("does nothing when limit is undefined", () => {
+    expect(() => {
+      ensureBudget(fakeSession(999), undefined);
+    }).not.toThrow();
+  });
+
+  it("passes when cumulative is below the limit", () => {
+    expect(() => {
+      ensureBudget(fakeSession(0.3), 0.5);
+    }).not.toThrow();
+  });
+
+  it("throws NawaituBudgetExceededError at or over the limit", () => {
+    expect(() => {
+      ensureBudget(fakeSession(0.5), 0.5);
+    }).toThrow(NawaituBudgetExceededError);
+    expect(() => {
+      ensureBudget(fakeSession(1.2), 0.5);
+    }).toThrow(NawaituBudgetExceededError);
+  });
+
+  it("the thrown error carries cumulative and limit values", () => {
+    try {
+      ensureBudget(fakeSession(1.234), 0.5);
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(NawaituBudgetExceededError);
+      if (err instanceof NawaituBudgetExceededError) {
+        expect(err.cumulativeUsd).toBeCloseTo(1.234);
+        expect(err.limitUsd).toBe(0.5);
+      }
+    }
   });
 });
 
