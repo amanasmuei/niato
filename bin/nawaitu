@@ -2,18 +2,18 @@
 # Nawaitu CLI dispatcher.
 #
 # Routes subcommands through pnpm to the matching script in package.json.
-# Defaults to `chat` when invoked with no args. Forwards any extra args
+# Defaults to `tui` when invoked with no args. Forwards any extra args
 # through, so `nawaitu chat --reset` becomes `pnpm chat --reset`.
 #
 # Setup (one-time): `pnpm link` from the repo root, then `nawaitu login`
-# and `nawaitu chat` are available globally.
+# and `nawaitu` (launches TUI) are available globally.
 
 set -e
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 if [ $# -eq 0 ]; then
-  set -- chat
+  set -- tui
 fi
 
 exec pnpm --silent --dir "$DIR" "$@"

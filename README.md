@@ -42,6 +42,33 @@ pnpm dev "explain how DNS works in three sentences"
 
 You'll see a structured `turn` log line (classification, dispatched specialist, tokens, cost, latency) followed by the model's answer.
 
+## TUI (end-user terminal app)
+
+Nawaitu ships with a polished terminal UI for end-user use. After installing
+globally:
+
+```bash
+pnpm link
+nawaitu          # launches the TUI
+nawaitu login    # OAuth subscription auth (wraps `claude /login`)
+nawaitu chat     # legacy multi-turn REPL (kept for backwards compat)
+```
+
+**First run** walks you through:
+
+1. Auth pick — Claude subscription (recommended) or API key.
+2. Companion setup — name, voice, optional preferences (saved to `~/.nawaitu/companion.json`).
+
+**The TUI gives you:**
+
+- A launcher with **New session**, **Resume last**, **Settings**, **About**.
+- Per-session mode pick (casual / dev) — same engine, different observability density.
+- Always-visible thin footer showing classify/dispatch ticks, latency, cost.
+- Sessions persisted as JSONL at `~/.nawaitu/sessions/{id}.jsonl` (last 50 retained).
+
+**Headless paths still work:** `echo "hi" | pnpm dev` and `pnpm dev "hi"` remain
+unchanged for scripting.
+
 ### Try the Support and Dev Tools packs interactively
 
 `pnpm dev` loads the Generic pack only. To exercise the specialized packs, use the multi-pack driver — it loads every shipped pack so single-domain prompts route correctly across them:
