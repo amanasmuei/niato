@@ -33,7 +33,10 @@ export type {
   TurnSpecialistRecord,
   TurnTokenUsage,
 } from "./observability/trace.js";
-export { extractAgentDispatches } from "./observability/trace.js";
+export {
+  extractAgentDispatches,
+  extractGuardrailsTriggered,
+} from "./observability/trace.js";
 export type { SessionContext } from "./memory/session.js";
 
 export { stubClassifier } from "./core/classifier/stub.js";

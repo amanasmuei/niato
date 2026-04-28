@@ -45,6 +45,28 @@ function isToolUseBlock(block: unknown): block is ToolUseBlockShape {
   );
 }
 
+// Returns the ordered list of tool_name values that the SDK's permission
+// pipeline denied during this turn. Sourced from the canonical
+// `permission_denials: SDKPermissionDenial[]` field on the result message
+// — no message-content scanning. Each denied tool call appears once per
+// (tool_use_id), preserving order. Drives `TurnRecord.guardrailsTriggered`.
+export function extractGuardrailsTriggered(messages: SDKMessage[]): string[] {
+  const triggered: string[] = [];
+  for (const msg of messages) {
+    if (msg.type !== "result") continue;
+    if (msg.subtype !== "success" && msg.subtype !== "error_during_execution")
+      continue;
+    const denials = (
+      msg as { permission_denials?: { tool_name: string }[] }
+    ).permission_denials;
+    if (!Array.isArray(denials)) continue;
+    for (const d of denials) {
+      if (typeof d.tool_name === "string") triggered.push(d.tool_name);
+    }
+  }
+  return triggered;
+}
+
 // Returns the ordered list of `subagent_type` values dispatched by the
 // orchestrator (top-level Agent tool calls). The dispatch tool was renamed
 // `Task` → `Agent` in Claude Code v2.1.63; both names can appear depending
@@ -130,6 +152,6 @@ export function buildTurnRecord(args: BuildTurnRecordArgs): TurnRecord {
     costUsd,
     latencyMs: args.latencyMs,
     outcome,
-    guardrailsTriggered: [],
+    guardrailsTriggered: extractGuardrailsTriggered(args.messages),
   };
 }
