@@ -101,7 +101,7 @@ interface TurnRecord {
   costUsd: number;                                // SDK-reported total
   latencyMs: number;                              // wall clock, includes classifier
   outcome: "success" | "error";
-  guardrailsTriggered: string[];                  // populated by hook outputs in Phase 4+
+  guardrailsTriggered: string[];                  // hardcoded []; wiring deferred to Phase 7 observability
 }
 ```
 
