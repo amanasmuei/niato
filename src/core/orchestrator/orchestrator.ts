@@ -13,6 +13,7 @@ import {
 import { BuiltinTools } from "../../tools/builtin.js";
 import { type Hooks, mergeHooks } from "../../guardrails/hooks.js";
 import { agentOnlyOrchestratorHook } from "../../guardrails/orchestrator-enforcement.js";
+import { buildPersonaPreamble, type Persona } from "../persona.js";
 import { ORCHESTRATOR_PROMPT } from "./prompt.js";
 
 const ORCHESTRATOR_MODEL = "claude-opus-4-7";
@@ -22,6 +23,9 @@ export interface OrchestratorInput {
   classification: IntentResult;
   packs: DomainPack[];
   hooks?: Hooks;
+  // Optional Level 1 persona. Prepended to the orchestrator's system
+  // prompt as the user-facing identity layer. See src/core/persona.ts.
+  persona?: Persona;
 }
 
 export interface OrchestratorOutput {
@@ -145,13 +149,24 @@ const builtInHooks: Hooks = {
   PreToolUse: [{ hooks: [agentOnlyOrchestratorHook] }],
 };
 
+// Composes the orchestrator's full system prompt from the optional persona
+// preamble (Level 1 user-facing identity) and the existing operational
+// dispatch instructions. Exposed as a named helper so the persona wiring
+// is verifiable without mocking the Agent SDK's query().
+export function buildOrchestratorSystemPrompt(
+  persona: Persona | undefined,
+): string {
+  return `${buildPersonaPreamble(persona)}${ORCHESTRATOR_PROMPT}`;
+}
+
 export async function runOrchestrator(
   input: OrchestratorInput,
 ): Promise<OrchestratorOutput> {
   const mcpServers = mergePackMcpServers(input.packs);
+  const systemPrompt = buildOrchestratorSystemPrompt(input.persona);
   const options: Options = {
     model: ORCHESTRATOR_MODEL,
-    systemPrompt: ORCHESTRATOR_PROMPT,
+    systemPrompt,
     agents: mergePackAgents(input.packs),
     allowedTools: unionAllowedTools(input.packs),
     settingSources: [],

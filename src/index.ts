@@ -12,6 +12,8 @@ export { devToolsPack } from "./packs/dev-tools/index.js";
 export type { DomainPack, IntentDefinition } from "./packs/DomainPack.js";
 export type { Classifier, IntentResult } from "./core/classifier/types.js";
 export type { Config } from "./core/config.js";
+export type { Persona } from "./core/persona.js";
+export { buildPersonaPreamble } from "./core/persona.js";
 export type { Hooks } from "./guardrails/hooks.js";
 export { mergeHooks } from "./guardrails/hooks.js";
 export { agentOnlyOrchestratorHook } from "./guardrails/orchestrator-enforcement.js";

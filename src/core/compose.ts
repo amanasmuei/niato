@@ -23,6 +23,7 @@ import {
   updateSessionMetrics,
   type SessionMetrics,
 } from "../observability/metrics.js";
+import { type Persona } from "./persona.js";
 import { loadConfig, type Config } from "./config.js";
 
 export interface NawaituOptions {
@@ -47,6 +48,11 @@ export interface NawaituOptions {
   // telemetry must never break user flows. Wire OTel / Datadog /
   // Honeycomb / your own time-series store from here.
   onTurnComplete?: (trace: TurnRecord) => void | Promise<void>;
+  // Level 1 persona. Configurable user-facing identity layer prepended
+  // to the orchestrator's system prompt — see src/core/persona.ts. Per-
+  // user / multi-tenant persona is Level 2; persistent companion memory
+  // is Level 3.
+  persona?: Persona;
   config?: Config;
   logger?: Logger;
 }
@@ -129,6 +135,7 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
         classification,
         packs: options.packs,
         hooks: orchestratorHooks,
+        ...(options.persona !== undefined ? { persona: options.persona } : {}),
       });
 
       const trace = buildTurnRecord({

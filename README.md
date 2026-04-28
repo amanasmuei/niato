@@ -104,6 +104,15 @@ const nawaitu = createNawaitu({
   globalHooks: {
     // your custom org-wide PreToolUse / PostToolUse / Stop hooks
   },
+  persona: {
+    name: "Layla",
+    description: [
+      "Warm, faith-aware companion. Walk alongside, not above.",
+      "",
+      "Address the user as 'you'. Acknowledge difficulty without",
+      "minimizing. Avoid the word 'unfortunately'.",
+    ].join("\n"),
+  },
   onTurnComplete: async (trace) => {
     // pipe to OTel / Datadog / your time-series store
     await metrics.record(trace);
@@ -137,6 +146,19 @@ A `DomainPack` is a self-contained bundle: intents, specialist `AgentDefinition`
 | **Dev Tools** | `find_code`, `explain_code`, `fix_bug`, `debug_ci` | `codebase_search`, `code_explainer`, `bug_fixer`, `ci_debugger` | none — built-in tools only (`Read`, `Grep`, `Glob`, `Edit`, `Bash`, `WebFetch`) | `secretsScanHook` (AWS/GitHub/sk- key deny), `sandboxBashHook({ allowedCommands })` (Bash limited to test runners) |
 
 Adding your own pack: create `src/packs/<name>/{pack.ts, agents/, prompts/, evals/}` and export a single `DomainPack`. The Core never imports from inside a pack — only the public interface. Per-pack hooks merge into the orchestrator's `Options.hooks` after the built-in invariants and any global hooks.
+
+### Persona (Level 1)
+
+`persona?: { name?, description }` on `NawaituOptions` adds a configurable user-facing identity layer. The text is prepended to the orchestrator's system prompt — the orchestrator becomes the persona; specialists stay role-focused tools the persona uses. Pack brand voice (already in each specialist's `prompt.md`) keeps working unchanged.
+
+```ts
+persona: {
+  name: "Layla",
+  description: "Warm, faith-aware. Address the user by name. Acknowledge difficulty without minimizing.",
+}
+```
+
+What Level 1 covers: a consistent voice across every turn. What it doesn't: persistent memory, time-of-day modulation, evolving rapport, per-user persona — those are Level 2 / Level 3 work. A configurable voice without continuity won't *feel* like a companion; it's a uniform, not a relationship.
 
 ### Cross-pack composition
 
@@ -254,6 +276,7 @@ The check is strict: any drop in `passed` count fails. Case-count changes (i.e. 
 | Session metrics | `tests/metrics.test.ts` | Yes — pure aggregator + lookup |
 | Eval baseline | `tests/eval-baseline.test.ts` | Yes — read/write/check helpers |
 | Classifier schema | `tests/classifier-schema.test.ts` | Yes — locks `zodOutputFormat` shape against Anthropic API constraints |
+| Persona | `tests/persona.test.ts` | Yes — preamble construction + orchestrator system-prompt wiring |
 | Smoke (E2E) | `tests/smoke.test.ts` | No — needs `ANTHROPIC_API_KEY` |
 | Support smoke (E2E) | `tests/support-smoke.test.ts` | No — three real turns, ~$0.15 |
 | Dev Tools smoke (E2E) | `tests/dev-tools-smoke.test.ts` | No — three real turns, ~$0.25; asserts sandbox-bash deny reason in the message stream |
@@ -275,6 +298,7 @@ The check is strict: any drop in `passed` count fails. Case-count changes (i.e. 
 | 5 | Dev Tools pack: 4 intents, 4 specialists, built-in tool surface, sandbox-bash + secrets-scan hooks, 25 evals, live smoke (deny-path asserted in message stream); shared `runPackEvals` helper extracted; Ink TUI driver (`pnpm dev:tui`) |
 | 6 | Cross-pack composition: `IntentResult.secondary` carries cross-pack triples; orchestrator surfaces `Additional recommendations:` with per-entry confidence; `pickAdditionalRecommendations` resolves them into `<pack>.<specialist>` keys; classifier multi-domain detection evals (≥7/8); cross-pack smoke asserts `bug_fixer → escalate` dispatch order. Live verification gated on the next budget reset. |
 | 7 | Observability: `guardrailsTriggered` wired from `SDKPermissionDenial`; per-session `SessionMetrics` aggregator; pluggable `onTurnComplete(trace)` callback; per-pack eval regression baselines (`--baseline` / `--write-baseline`); `nawaitu.metrics(sessionId)` lookup. |
+| 8 | Cleanup: consolidated session aggregates into `metrics` (dropped duplicate `cumulativeCostUsd` / `turnCount` fields). Level 1 persona: configurable user-facing identity prepended to the orchestrator's system prompt. |
 
 Up next:
 
