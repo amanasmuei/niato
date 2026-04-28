@@ -6,7 +6,7 @@ Nawaitu is a TypeScript intent-routing agent built on the [Claude Agent SDK](htt
 
 ## Status
 
-**Phase 3 — Hooks and guardrails.** The `Agent`-only orchestrator invariant is now hard-enforced at the SDK permission layer via a built-in `PreToolUse` hook. `createNawaitu` accepts user-defined `globalHooks`, every `DomainPack` can declare pack-scoped `hooks`, and the merge order is built-in invariants → globalHooks → pack hooks. Input validators (`maxLength` on by default, `promptInjection` opt-in) reject obviously bad input before it consumes tokens. A per-session cumulative `costLimitUsd` blocks further turns once the budget is exhausted. Phase 4+ ship the Support and Dev Tools packs.
+**Phase 3 — Hooks and guardrails.** A built-in `PreToolUse` hook (`agentOnlyOrchestratorHook`) is wired into the orchestrator's SDK options to enforce "dispatch via `Agent` only" at the permission layer; the hook callback shape is unit-tested, full deny-path integration coverage lands as Phase 4+ packs add varied hook scenarios. `createNawaitu` accepts user-defined `globalHooks`, every `DomainPack` can declare pack-scoped `hooks`, and the merge order is built-in invariants → globalHooks → pack hooks. Input validators (`maxLength` on by default, `promptInjection` opt-in) reject obviously bad input before it consumes tokens. A per-session cumulative `costLimitUsd` blocks further turns once the budget is exhausted (E2E-tested). Phase 4+ ship the Support and Dev Tools packs.
 
 ## Quick start
 
@@ -57,7 +57,7 @@ console.log(turn.trace); // TurnRecord — see "Tracing" below
 
 | Area              | Phase 3 |
 | ----------------- | ------- |
-| Orchestrator      | Opus 4.7. **`Agent`-only dispatch is now hard-enforced** by a built-in `PreToolUse` hook (`agentOnlyOrchestratorHook`) that denies any non-`Agent` call from the main thread. The hook is always-on; there is no opt-out for an architectural invariant. |
+| Orchestrator      | Opus 4.7. A built-in `PreToolUse` hook (`agentOnlyOrchestratorHook`) is wired into the SDK's permission pipeline and unit-tested to deny any non-`Agent` call from the main thread. The hook is always-on; there is no opt-out for an architectural invariant. End-to-end deny-path coverage is deferred until Phase 4+ packs naturally exercise hook denials with more variety. |
 | Hooks framework   | `globalHooks` on `createNawaitu` and `pack.hooks` on every `DomainPack`. Merged into `Options.hooks` in order: built-in invariants → globalHooks → each pack's hooks. The first hook to deny short-circuits the SDK's permission flow. |
 | Input validators  | `maxLengthValidator(32_000)` runs by default. `promptInjectionValidator()` is opt-in (false-positive risk varies by domain). First failure throws `NawaituInputRejectedError` before classification. |
 | Cost limit        | `costLimitUsd` on `createNawaitu`. Pre-turn gate: if `session.cumulativeCostUsd ≥ limit`, throws `NawaituBudgetExceededError`. Mid-turn throttling deferred to Phase 7 (the SDK doesn't currently expose per-tool-call cost estimation). |
@@ -114,6 +114,7 @@ Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus `cost_usd`'s
 | Orchestrator enforcement | `tests/orchestrator-enforcement.test.ts` | Yes — pure hook callback |
 | Validators | `tests/validators.test.ts` | Yes — pure functions |
 | Smoke (E2E) | `tests/smoke.test.ts` | **No** — skipped without `ANTHROPIC_API_KEY` |
+| Cost-limit (E2E) | `tests/cost-limit-e2e.test.ts` | **No** — skipped without `ANTHROPIC_API_KEY`; runs two real turns |
 | Generic evals | `tests/evals.test.ts` | **No** — skipped without `ANTHROPIC_API_KEY`; ≥18/20 to pass |
 
 Run with a real key:
