@@ -87,7 +87,7 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
         messages: orchestratorResult.messages,
         latencyMs: Date.now() - startedAt,
       });
-      logger.log("info", "turn", trace as unknown as Record<string, unknown>);
+      logger.log("info", "turn", { ...trace });
 
       return {
         result: orchestratorResult.result,

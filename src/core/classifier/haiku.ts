@@ -1,6 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import type { z } from "zod";
 import { type DomainPack } from "../../packs/DomainPack.js";
 import {
   type Classifier,
@@ -46,13 +45,7 @@ export function createHaikuClassifier(
           },
         ],
         messages: [{ role: "user", content: input }],
-        output_config: {
-          format: zodOutputFormat(
-            ClassifierOutputSchema as unknown as z.ZodType<
-              z.infer<typeof ClassifierOutputSchema>
-            >,
-          ),
-        },
+        output_config: { format: zodOutputFormat(ClassifierOutputSchema) },
       });
 
       const parsed = response.parsed_output;
