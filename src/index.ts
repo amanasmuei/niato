@@ -9,6 +9,7 @@ export { genericPack } from "./packs/generic/index.js";
 
 export type { DomainPack, IntentDefinition } from "./packs/DomainPack.js";
 export type { Classifier, IntentResult } from "./core/classifier/types.js";
+export type { Config } from "./core/config.js";
 export type { Hooks } from "./guardrails/hooks.js";
 export type { Logger, LogLevel } from "./observability/log.js";
 export type { SessionContext } from "./memory/session.js";
