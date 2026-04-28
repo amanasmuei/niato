@@ -52,6 +52,14 @@ pnpm dev:multi "I need a \$250 refund on order ORD-9001 — never arrived."
 
 That last one trips the dollar-limit hook (auto-approve threshold is $20). The response will name human approval rather than a refund ID — proof the hook fired before the tool ran.
 
+### Watch a turn unfold in a TUI
+
+`pnpm dev:tui` renders the same turn through an Ink dashboard — phase progress, classifier result, dispatched specialists, per-model token usage, cost and latency — instead of a JSON log line. Single turn, exits when the run completes:
+
+```bash
+pnpm dev:tui "Please refund \$15 on order ORD-99 — wrong size."
+```
+
 ### Run the golden eval suites
 
 ```bash

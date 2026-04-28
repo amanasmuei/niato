@@ -19,6 +19,7 @@
   "scripts": {
     "dev": "tsx --env-file=.env src/cli.ts",
     "dev:multi": "tsx --env-file=.env src/cli-multi.ts",
+    "dev:tui": "tsx --env-file=.env src/cli-tui.tsx",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -38,7 +39,11 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
     "eslint": "^10.2.1",
+    "ink": "^7.0.1",
+    "ink-spinner": "^5.0.0",
+    "react": "^19.2.5",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.1",
