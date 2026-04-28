@@ -84,6 +84,29 @@ describe("mergePackAgents", () => {
     ]);
   });
 
+  it("preserves Dev Tools specialists' built-in tool allowlists (no MCP)", () => {
+    const merged = mergePackAgents([devToolsPack]);
+    expect(merged["dev_tools.codebase_search"]?.tools).toEqual([
+      "Read",
+      "Grep",
+      "Glob",
+    ]);
+    expect(merged["dev_tools.code_explainer"]?.tools).toEqual([
+      "Read",
+      "Grep",
+    ]);
+    expect(merged["dev_tools.bug_fixer"]?.tools).toEqual([
+      "Read",
+      "Edit",
+      "Bash",
+    ]);
+    expect(merged["dev_tools.ci_debugger"]?.tools).toEqual([
+      "Read",
+      "Grep",
+      "WebFetch",
+    ]);
+  });
+
   it("preserves Support specialists' MCP tool lists (one MCP tool each, no built-ins)", () => {
     const merged = mergePackAgents([supportPack]);
     expect(merged["support.ticket_lookup"]?.tools).toEqual([
