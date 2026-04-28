@@ -14,6 +14,7 @@ import {
 } from "../src/index.js";
 import { loadConfig } from "../src/core/config.js";
 import { ensureBudget } from "../src/core/compose.js";
+import { emptySessionMetrics } from "../src/observability/metrics.js";
 import {
   mergePackMcpServers,
   unionAllowedTools,
@@ -28,6 +29,7 @@ function fakeSession(cumulativeCostUsd: number): SessionContext {
     createdAt: new Date(0),
     turnCount: 0,
     cumulativeCostUsd,
+    metrics: emptySessionMetrics(),
   };
 }
 

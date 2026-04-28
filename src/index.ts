@@ -37,6 +37,8 @@ export {
   extractAgentDispatches,
   extractGuardrailsTriggered,
 } from "./observability/trace.js";
+export type { SessionMetrics } from "./observability/metrics.js";
+export { emptySessionMetrics } from "./observability/metrics.js";
 export type { SessionContext } from "./memory/session.js";
 
 export { stubClassifier } from "./core/classifier/stub.js";

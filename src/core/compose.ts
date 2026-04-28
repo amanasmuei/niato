@@ -19,6 +19,10 @@ import {
 } from "../memory/session.js";
 import { createConsoleLogger, type Logger } from "../observability/log.js";
 import { buildTurnRecord, type TurnRecord } from "../observability/trace.js";
+import {
+  updateSessionMetrics,
+  type SessionMetrics,
+} from "../observability/metrics.js";
 import { loadConfig, type Config } from "./config.js";
 
 export interface NawaituOptions {
@@ -35,8 +39,14 @@ export interface NawaituOptions {
   inputValidators?: InputValidator[];
   // Per-session cumulative-cost ceiling (USD). Checked at the start of each
   // run(); the turn is rejected with NawaituBudgetExceededError before any
-  // tokens are spent. Mid-turn throttling is deferred (Phase 7).
+  // tokens are spent. Mid-turn throttling is deferred to a later phase
+  // (the SDK does not currently expose per-tool-call cost estimation).
   costLimitUsd?: number;
+  // Phase 7 telemetry hook. Invoked after each turn with the freshly-built
+  // TurnRecord. Errors thrown here are caught and logged at warn level —
+  // telemetry must never break user flows. Wire OTel / Datadog /
+  // Honeycomb / your own time-series store from here.
+  onTurnComplete?: (trace: TurnRecord) => void | Promise<void>;
   config?: Config;
   logger?: Logger;
 }
@@ -61,6 +71,10 @@ export interface NawaituTurn {
 
 export interface Nawaitu {
   run(userInput: string, sessionId?: string): Promise<NawaituTurn>;
+  // Returns the rolling per-session metrics aggregated across every turn
+  // run() has completed for the given session. Returns undefined when the
+  // session is unknown (e.g. never created or evicted).
+  metrics(sessionId: string): SessionMetrics | undefined;
 }
 
 export function createNawaitu(options: NawaituOptions): Nawaitu {
@@ -126,7 +140,20 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
         latencyMs: Date.now() - startedAt,
       });
       session.cumulativeCostUsd += trace.costUsd;
+      updateSessionMetrics(session.metrics, trace);
       logger.log("info", "turn", { ...trace });
+
+      if (options.onTurnComplete !== undefined) {
+        try {
+          await options.onTurnComplete(trace);
+        } catch (err) {
+          // Telemetry callbacks must never break user flows. Log at warn
+          // level and continue — the user still gets their turn result.
+          logger.log("warn", "onTurnComplete callback threw", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
 
       return {
         result: orchestratorResult.result,
@@ -135,6 +162,9 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
         messages: orchestratorResult.messages,
         trace,
       };
+    },
+    metrics(sessionId) {
+      return sessions.get(sessionId)?.metrics;
     },
   };
 }
