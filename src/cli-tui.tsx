@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { Box, render, Text, useApp } from "ink";
-import Spinner from "ink-spinner";
+import { PhaseLine } from "./cli/tui/components/phase-line.js";
 import { createNawaitu } from "./core/compose.js";
 import { type DomainPack } from "./packs/DomainPack.js";
 import { genericPack } from "./packs/generic/index.js";
@@ -175,44 +175,6 @@ function App({
           </Text>
           <Text color="red">{state.errorMessage}</Text>
         </Box>
-      )}
-    </Box>
-  );
-}
-
-function PhaseLine({
-  label,
-  active,
-  done,
-  failed,
-  detail,
-}: {
-  label: string;
-  active: boolean;
-  done: boolean;
-  failed: boolean;
-  detail?: string | undefined;
-}): ReactElement {
-  let icon: ReactElement;
-  if (failed) {
-    icon = <Text color="red">✗</Text>;
-  } else if (done) {
-    icon = <Text color="green">✓</Text>;
-  } else if (active) {
-    icon = (
-      <Text color="yellow">
-        <Spinner type="dots" />
-      </Text>
-    );
-  } else {
-    icon = <Text color="gray">·</Text>;
-  }
-  return (
-    <Box>
-      <Box marginRight={1}>{icon}</Box>
-      <Text {...(done ? {} : { color: "gray" })}>{label}</Text>
-      {detail !== undefined && (
-        <Text color="cyan">{`  ${detail}`}</Text>
       )}
     </Box>
   );
