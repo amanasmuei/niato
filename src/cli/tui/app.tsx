@@ -145,13 +145,18 @@ export function App({
       setAuth({ mode: "subscription" });
     } else {
       const env = process.env["ANTHROPIC_API_KEY"];
-      const next: AuthState =
-        typeof env === "string" && env.length > 0
-          ? { mode: "api-key", apiKey: env }
-          : // Fall through to "subscription" when api-key requested but no env
-            // var is set: AuthSchema requires a non-empty apiKey. The
-            // post-auth hand-off below tells the user to re-run setup.
-            { mode: "subscription" };
+      if (typeof env !== "string" || env.length === 0) {
+        // Do not silently fall through to subscription: the user picked
+        // api-key, and persisting a different mode would mislead them and
+        // skip first-run on next launch. Surface the requirement clearly
+        // and exit without writing auth.json so first-run re-shows.
+        process.stderr.write(
+          "\nAPI key auth requires ANTHROPIC_API_KEY. Set it in your shell and re-run `nawaitu`.\n",
+        );
+        exit();
+        return;
+      }
+      const next: AuthState = { mode: "api-key", apiKey: env };
       saveAuth(next, authPath);
       setAuth(next);
     }
