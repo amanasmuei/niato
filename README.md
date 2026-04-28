@@ -24,7 +24,7 @@ The architecture is a series of declarations before actions: **classify, plan, g
 Requires Node 20.6+ and pnpm. **Authenticate via either of:**
 
 - **API key** — set `ANTHROPIC_API_KEY` (developer API billing, per-token).
-- **Claude Max subscription** — run `claude /login` in Claude Code; Nawaitu picks up the OAuth session automatically (no env var needed). Costs roll against your Max quota; per-turn API spend drops to zero.
+- **Claude Max subscription** — run `pnpm login` (a thin wrapper around `claude /login`); Nawaitu picks up the OAuth session automatically (no env var needed). Costs roll against your Max quota; per-turn API spend drops to zero. **Read the "Note on subscription auth" below before using this for anything beyond personal use.**
 
 ```bash
 pnpm install
@@ -96,11 +96,15 @@ Layla · session 8861e2 · ctrl-D to exit
 
 Same session ID across turns — the cost ledger and `SessionMetrics` aggregate naturally. Each turn is otherwise independent (no conversation memory yet — that's the Level 3 long-term-memory ask). Pass `--reset` to re-run the wizard.
 
-To launch as `arienz` instead of `pnpm chat`, add a one-line shell alias:
+To get a global `nawaitu` command instead of `pnpm chat`, run `pnpm link` once from the repo root. After that:
 
 ```bash
-alias arienz='pnpm --silent --dir ~/Personals/nawaitu chat'
+nawaitu login   # one-time, OAuth via Claude Code
+nawaitu         # default subcommand: chat
+nawaitu chat    # explicit
 ```
+
+The `bin/nawaitu` dispatcher forwards subcommands through to the matching `pnpm` script, so `nawaitu chat --reset` works the same as `pnpm chat --reset`. To launch as `arienz` instead, add a shell alias: `alias arienz='nawaitu'`.
 
 ### Watch a turn unfold in a TUI
 
@@ -268,7 +272,7 @@ Two paths into the Anthropic API; pick whichever matches your setup. Both flow t
 | Mode | Setup | Per-turn cost | When to use |
 | ---- | ----- | ------------- | ----------- |
 | **API key** | Set `ANTHROPIC_API_KEY` in `.env` | ~$0.15/turn against your API budget | Production deployments, CI, multi-user, anywhere a developer API key is the right call |
-| **Claude Max subscription** | `claude /login` in Claude Code; leave `ANTHROPIC_API_KEY` unset | $0 — runs against your Max quota | Personal, single-user, on your own machine |
+| **Claude Max subscription** | `pnpm login` (or `claude /login` directly); leave `ANTHROPIC_API_KEY` unset | $0 — runs against your Max quota | Personal, single-user, on your own machine |
 
 `createNawaitu()` logs the chosen path at startup (`auth mode: api_key` or `auth mode: oauth_subscription`). If both are configured, the env var wins.
 

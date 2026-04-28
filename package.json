@@ -13,14 +13,19 @@
   },
   "files": [
     "dist",
+    "bin",
     "README.md",
     "ARCHITECTURE.md"
   ],
+  "bin": {
+    "nawaitu": "bin/nawaitu"
+  },
   "scripts": {
     "dev": "tsx --env-file=.env src/cli.ts",
     "dev:multi": "tsx --env-file=.env src/cli-multi.ts",
     "dev:tui": "tsx --env-file=.env src/cli-tui.tsx",
     "chat": "tsx --env-file=.env src/cli-chat.ts",
+    "login": "tsx src/cli-login.ts",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
