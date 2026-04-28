@@ -3,6 +3,7 @@ import { codebaseSearchAgent } from "./agents/codebase_search.js";
 import { codeExplainerAgent } from "./agents/code_explainer.js";
 import { bugFixerAgent } from "./agents/bug_fixer.js";
 import { ciDebuggerAgent } from "./agents/ci_debugger.js";
+import { devToolsHooks } from "./hooks/index.js";
 
 const intents: IntentDefinition[] = [
   { name: "find_code", description: "Locate code matching a description" },
@@ -29,5 +30,6 @@ export const devToolsPack: DomainPack = {
     bug_fixer: bugFixerAgent,
     ci_debugger: ciDebuggerAgent,
   },
+  hooks: devToolsHooks,
   route: (intent) => intentToSpecialist[intent.intent] ?? null,
 };
