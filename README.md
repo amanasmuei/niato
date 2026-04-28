@@ -6,7 +6,7 @@ Nawaitu is a TypeScript intent-routing agent built on the [Claude Agent SDK](htt
 
 ## Status
 
-**Phase 3 — Hooks and guardrails.** A built-in `PreToolUse` hook (`agentOnlyOrchestratorHook`) is wired into the orchestrator's SDK options to enforce "dispatch via `Agent` only" at the permission layer; the hook callback shape is unit-tested, full deny-path integration coverage lands as Phase 4+ packs add varied hook scenarios. `createNawaitu` accepts user-defined `globalHooks`, every `DomainPack` can declare pack-scoped `hooks`, and the merge order is built-in invariants → globalHooks → pack hooks. Input validators (`maxLength` on by default, `promptInjection` opt-in) reject obviously bad input before it consumes tokens. A per-session cumulative `costLimitUsd` blocks further turns once the budget is exhausted (E2E-tested). Phase 4+ ship the Support and Dev Tools packs.
+**Phase 4 — Support pack.** The first specialized `DomainPack` ships end-to-end: five intents (`order_status`, `refund_request`, `billing_question`, `complaint`, `account_help`) routed to four specialists (`ticket_lookup`, `refund_processor`, `kb_search`, `escalate`). An in-process MCP server (`support_stub`) exposes the four canned tools the specialists need; a real production deployment swaps the stub for real Zendesk / Stripe servers in `pack.mcpServers`. The pack registers two PreToolUse hooks: `piiRedactionHook` (denies tool calls whose input matches a Luhn-valid credit-card or US-SSN pattern) and a `dollarLimit` factory (used once for `issue_refund` with the $20 auto-approve threshold from `ARCHITECTURE.md` §7.2). 25 golden eval cases (≥22/25 to pass) and three live smoke turns (order-status dispatch, sub-threshold refund, denied refund) verify the loop end-to-end. Phase 5+ ship the Dev Tools pack and cross-pack composition.
 
 ## Quick start
 
@@ -19,6 +19,7 @@ pnpm typecheck             # tsc --noEmit
 pnpm lint                  # eslint
 pnpm test                  # vitest (smoke + evals skip without ANTHROPIC_API_KEY)
 pnpm eval generic          # run the Generic pack's golden eval suite (≥18/20 to pass)
+pnpm eval support          # run the Support pack's golden eval suite (≥22/25 to pass)
 ```
 
 Run a single turn through the CLI driver:
@@ -29,18 +30,19 @@ echo "what is 2+2" | pnpm dev
 pnpm dev "explain how DNS works"
 ```
 
-The CLI uses the Generic pack only. To embed Nawaitu in your own code:
+The CLI uses the Generic pack only (cross-pack composition lands in Phase 6). To embed Nawaitu with multiple packs:
 
 ```ts
 import {
   createNawaitu,
   genericPack,
+  supportPack,
   promptInjectionValidator,
   maxLengthValidator,
 } from "nawaitu";
 
 const nawaitu = createNawaitu({
-  packs: [genericPack],
+  packs: [genericPack, supportPack],
   inputValidators: [maxLengthValidator(8_000), promptInjectionValidator()],
   costLimitUsd: 1.0, // reject further turns once the session has spent $1
   globalHooks: {
@@ -48,26 +50,26 @@ const nawaitu = createNawaitu({
   },
 });
 
-const turn = await nawaitu.run("explain how DNS works");
+const turn = await nawaitu.run("Please refund $15 on order ORD-99 — wrong size.");
 console.log(turn.result);
 console.log(turn.trace); // TurnRecord — see "Tracing" below
 ```
 
-## What Phase 3 delivers vs defers
+## What Phase 4 delivers vs defers
 
-| Area              | Phase 3 |
+| Area              | Phase 4 |
 | ----------------- | ------- |
-| Orchestrator      | Opus 4.7. A built-in `PreToolUse` hook (`agentOnlyOrchestratorHook`) is wired into the SDK's permission pipeline and unit-tested to deny any non-`Agent` call from the main thread. The hook is always-on; there is no opt-out for an architectural invariant. End-to-end deny-path coverage is deferred until Phase 4+ packs naturally exercise hook denials with more variety. |
+| Support pack      | 5 intents → 4 specialists, MCP-tool-only allowlist (no `Read`/`Bash`/network), prompts in adjacent `.md` files, hooks wired (`piiRedactionHook` + `dollarLimit({ tool, autoApproveBelow })`), 25 golden eval cases (≥22/25), three live smoke scenarios. |
+| MCP servers       | In-process `support_stub` server with four canned-response tools (`lookup_ticket`, `search_kb`, `issue_refund`, `create_priority_ticket`). Production swaps it for real Zendesk / Stripe by replacing `pack.mcpServers`. |
+| Pack hooks        | `DomainPack.hooks` is now exercised. `piiRedactionHook` denies on Luhn-valid CC or US-SSN patterns in `tool_input`. `dollarLimit({ tool, autoApproveBelow })` is a factory returning a `HookCallbackMatcher` scoped to a single tool name. |
+| Skills            | **Deferred.** `AgentDefinition.skills` requires filesystem skill discovery, which requires `settingSources` to include `'project'` / `'user'`. Our orchestrator runs with `settingSources: []` per the architectural invariant in `CLAUDE.md`. Skill content is rolled into specialist prompts inline; reintroducing a skills loader is a Phase 5+ design question. |
+| Orchestrator      | Opus 4.7. The built-in `agentOnlyOrchestratorHook` (Phase 3) holds: a Phase 4 regression test confirms it denies a synthetic main-thread call to `mcp__support_stub__issue_refund`. Pack-contributed `mcpServers` flow through `mergePackMcpServers` into the SDK's top-level `Options.mcpServers`. |
+| Cross-pack        | **Deferred to Phase 6.** Calling `createNawaitu({ packs: [genericPack, supportPack] })` works (the wiring tests confirm), but the orchestrator's behavior under multi-domain queries is not validated end-to-end yet. |
 | Hooks framework   | `globalHooks` on `createNawaitu` and `pack.hooks` on every `DomainPack`. Merged into `Options.hooks` in order: built-in invariants → globalHooks → each pack's hooks. The first hook to deny short-circuits the SDK's permission flow. |
 | Input validators  | `maxLengthValidator(32_000)` runs by default. `promptInjectionValidator()` is opt-in (false-positive risk varies by domain). First failure throws `NawaituInputRejectedError` before classification. |
-| Cost limit        | `costLimitUsd` on `createNawaitu`. Pre-turn gate: if `session.cumulativeCostUsd ≥ limit`, throws `NawaituBudgetExceededError`. Mid-turn throttling deferred to Phase 7 (the SDK doesn't currently expose per-tool-call cost estimation). |
-| Classifier        | Real Haiku 4.5 with prompt caching + tool-based structured output (Phase 2). |
-| Generic pack      | Retrieval / action / escalate specialists, 20 golden eval cases (Phase 2). |
-| Tracing           | Per-turn `TurnRecord` (Phase 2). |
-| Support / Dev Tools | Deferred (Phase 4+). |
-| Memory            | In-memory session map with `cumulativeCostUsd`. Long-term store and skills loader come later. |
-| MCP servers       | None loaded. Built-in SDK tools only. |
+| Cost limit        | `costLimitUsd` on `createNawaitu`. Pre-turn gate: if `session.cumulativeCostUsd ≥ limit`, throws `NawaituBudgetExceededError`. Mid-turn throttling deferred to Phase 7. |
 | Cost dashboards / OTel tracing | Phase 7. The `costUsd` field is populated per turn but not aggregated. |
+| Dev Tools pack    | Deferred to Phase 5. |
 
 ## Guardrails
 
@@ -113,20 +115,24 @@ Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus `cost_usd`'s
 | Classifier unit | `tests/classifier.test.ts` | Yes — Anthropic SDK is `vi.mock`'d |
 | Orchestrator enforcement | `tests/orchestrator-enforcement.test.ts` | Yes — pure hook callback |
 | Validators | `tests/validators.test.ts` | Yes — pure functions |
+| Support stub MCP | `tests/support-stub.test.ts` | Yes — handlers called directly |
+| Support hooks | `tests/support-hooks.test.ts` | Yes — pure hook callbacks |
 | Smoke (E2E) | `tests/smoke.test.ts` | **No** — skipped without `ANTHROPIC_API_KEY` |
-| Cost-limit (E2E) | `tests/cost-limit-e2e.test.ts` | **No** — skipped without `ANTHROPIC_API_KEY`; runs two real turns |
-| Generic evals | `tests/evals.test.ts` | **No** — skipped without `ANTHROPIC_API_KEY`; ≥18/20 to pass |
+| Support smoke (E2E) | `tests/support-smoke.test.ts` | **No** — skipped; three real Support turns (~$0.15) |
+| Cost-limit (E2E) | `tests/cost-limit-e2e.test.ts` | **No** — skipped; runs two real turns |
+| Generic + Support evals | `tests/evals.test.ts` | **No** — skipped; ≥18/20 Generic, ≥22/25 Support |
 
 Run with a real key:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-… pnpm test
 ANTHROPIC_API_KEY=sk-ant-… pnpm eval generic
+ANTHROPIC_API_KEY=sk-ant-… pnpm eval support
 ```
 
 ## Layout
 
-Follows `ARCHITECTURE.md` §13. Phase 3 adds `src/guardrails/{orchestrator-enforcement.ts,validators.ts,errors.ts}` and extends `src/guardrails/hooks.ts` with `mergeHooks`.
+Follows `ARCHITECTURE.md` §13. Phase 4 adds `src/packs/support/` (pack module with `agents/`, `prompts/`, `tools/`, `hooks/`, `evals/`) and extends the orchestrator with `mergePackMcpServers` so `DomainPack.mcpServers` flows into `Options.mcpServers`.
 
 ## Conventions
 
