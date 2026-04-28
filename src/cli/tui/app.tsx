@@ -117,14 +117,26 @@ export function App({
       // the session screen carrying the chosen mode.
       stack.push("mode-prompt", {});
     } else if (choice === "resume" && recent !== null) {
-      const replayed: TurnState[] = recent.turns.map((t) => ({
-        input: t.input,
-        output: t.output,
-        classification: t.classification,
-        trace: t.trace,
-        errorMessage: undefined,
-        phase: "done",
-      }));
+      const replayed: TurnState[] = recent.turns.map((t) => {
+        if (t.type === "error") {
+          return {
+            input: t.input,
+            output: undefined,
+            classification: undefined,
+            trace: undefined,
+            errorMessage: t.errorMessage,
+            phase: "error" as const,
+          };
+        }
+        return {
+          input: t.input,
+          output: t.output,
+          classification: t.classification,
+          trace: t.trace,
+          errorMessage: undefined,
+          phase: "done" as const,
+        };
+      });
       stack.push("session", {
         sessionId: recent.sessionId,
         mode: recent.mode,

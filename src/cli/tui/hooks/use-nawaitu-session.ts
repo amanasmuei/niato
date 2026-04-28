@@ -117,31 +117,17 @@ export function useNawaituSession(
         onTurnComplete?.(next);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        const errorTurn: TurnState = {
+          input,
+          output: undefined,
+          classification: undefined,
+          trace: undefined,
+          errorMessage: msg,
+          phase: "error",
+        };
         setPhase("error");
-        setTurns((t) => {
-          // Invariant: the optimistic push above guarantees length >= 1
-          // before the catch block runs. Runtime-check anyway because
-          // project ESLint forbids non-null assertions.
-          const last = t[t.length - 1];
-          if (last === undefined) {
-            // Defensive: should be unreachable given the optimistic push.
-            return [
-              ...t,
-              {
-                input,
-                output: undefined,
-                classification: undefined,
-                trace: undefined,
-                errorMessage: msg,
-                phase: "error",
-              },
-            ];
-          }
-          return [
-            ...t.slice(0, -1),
-            { ...last, phase: "error", errorMessage: msg },
-          ];
-        });
+        setTurns((t) => [...t.slice(0, -1), errorTurn]);
+        onTurnComplete?.(errorTurn);
       }
     },
     [nawaitu, sessionId, onTurnComplete],

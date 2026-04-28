@@ -32,13 +32,24 @@ export interface SessionTurnLine {
   ts: string;
 }
 
-export type SessionLine = SessionStartLine | SessionTurnLine;
+export interface SessionErrorLine {
+  v: 1;
+  type: "error";
+  input: string;
+  errorMessage: string;
+  ts: string;
+}
+
+export type SessionLine =
+  | SessionStartLine
+  | SessionTurnLine
+  | SessionErrorLine;
 
 export interface LoadedSession {
   sessionId: string;
   mode: SessionMode;
   createdAt: string;
-  turns: SessionTurnLine[];
+  turns: (SessionTurnLine | SessionErrorLine)[];
 }
 
 export function defaultSessionsDir(): string {
@@ -57,7 +68,7 @@ function isSessionLine(value: unknown): value is SessionLine {
   if (typeof value !== "object" || value === null) return false;
   // Cast to read the `type` discriminator off an unknown object literal.
   const t = (value as Record<string, unknown>)["type"];
-  return t === "session-start" || t === "turn";
+  return t === "session-start" || t === "turn" || t === "error";
 }
 
 export function appendSessionStart(
@@ -98,6 +109,23 @@ export function appendTurn(
   appendFileSync(fileFor(sessionId, dir), `${JSON.stringify(line)}\n`);
 }
 
+export function appendError(
+  sessionId: string,
+  input: string,
+  errorMessage: string,
+  dir: string = defaultSessionsDir(),
+): void {
+  ensureDir(dir);
+  const line: SessionErrorLine = {
+    v: 1,
+    type: "error",
+    input,
+    errorMessage,
+    ts: new Date().toISOString(),
+  };
+  appendFileSync(fileFor(sessionId, dir), `${JSON.stringify(line)}\n`);
+}
+
 export function loadSession(
   sessionId: string,
   dir: string = defaultSessionsDir(),
@@ -108,7 +136,7 @@ export function loadSession(
   const lines = text.split("\n").filter((l) => l.length > 0);
   let mode: SessionMode | undefined;
   let createdAt: string | undefined;
-  const turns: SessionTurnLine[] = [];
+  const turns: (SessionTurnLine | SessionErrorLine)[] = [];
   for (const raw of lines) {
     try {
       const obj: unknown = JSON.parse(raw);
@@ -117,6 +145,7 @@ export function loadSession(
         mode = obj.mode;
         createdAt = obj.createdAt;
       } else {
+        // Narrowed to SessionTurnLine | SessionErrorLine — both go into turns.
         turns.push(obj);
       }
     } catch {

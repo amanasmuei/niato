@@ -67,6 +67,52 @@ describe("Session screen", () => {
     expect(lines.length).toBeGreaterThanOrEqual(2); // session-start + at least 1 turn
   });
 
+  it("persists a failed turn as an error line in JSONL", async () => {
+    const { stdin, rerender } = render(
+      <Session
+        companion={companion}
+        mode="casual"
+        sessionId="ses-err"
+        sessionsDir={dir}
+        nawaituFactory={() =>
+          makeStubNawaitu([{ output: "", throws: new Error("boom") }])
+        }
+        replayedTurns={[]}
+        onExit={() => undefined}
+      />,
+    );
+
+    stdin.write("trigger");
+    await new Promise((r) => setImmediate(r));
+    stdin.write("\r");
+    await new Promise((r) => setTimeout(r, 30));
+    rerender(
+      <Session
+        companion={companion}
+        mode="casual"
+        sessionId="ses-err"
+        sessionsDir={dir}
+        nawaituFactory={() =>
+          makeStubNawaitu([{ output: "", throws: new Error("boom") }])
+        }
+        replayedTurns={[]}
+        onExit={() => undefined}
+      />,
+    );
+
+    const file = join(dir, "ses-err.jsonl");
+    expect(existsSync(file)).toBe(true);
+    const lines = readFileSync(file, "utf8").split("\n").filter(Boolean);
+    // session-start + 1 error
+    expect(lines.length).toBe(2);
+    const errorLine = JSON.parse(lines[1] ?? "{}") as {
+      type?: string;
+      errorMessage?: string;
+    };
+    expect(errorLine.type).toBe("error");
+    expect(errorLine.errorMessage).toBe("boom");
+  });
+
   it("renders replayed turns from a resumed session", () => {
     const replayed: TurnState[] = [
       {

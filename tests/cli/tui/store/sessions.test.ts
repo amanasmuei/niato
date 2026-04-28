@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   appendSessionStart,
   appendTurn,
+  appendError,
   loadSession,
   loadMostRecent,
   listRecentSessions,
@@ -49,7 +50,12 @@ describe("session store", () => {
     expect(loaded.mode).toBe("casual");
     expect(loaded.turns).toHaveLength(2);
     expect(loaded.turns[0]?.input).toBe("hello");
-    expect(loaded.turns[1]?.output).toBe("again-out");
+    const second = loaded.turns[1];
+    if (second?.type === "turn") {
+      expect(second.output).toBe("again-out");
+    } else {
+      throw new Error("expected second line to be a turn");
+    }
   });
 
   it("returns null for missing session", () => {
@@ -75,6 +81,21 @@ describe("session store", () => {
     expect(list[0]?.sessionId).toBe("new");
     const recent = expectLoaded(loadMostRecent(dir));
     expect(recent.sessionId).toBe("new");
+  });
+
+  it("round-trips error lines", () => {
+    appendSessionStart("s1", "casual", 1, dir);
+    appendTurn("s1", "good q", "good a", fakeTrace(), undefined, dir);
+    appendError("s1", "bad q", "boom", dir);
+
+    const loaded = expectLoaded(loadSession("s1", dir));
+    expect(loaded.turns).toHaveLength(2);
+    expect(loaded.turns[0]?.type).toBe("turn");
+    expect(loaded.turns[1]?.type).toBe("error");
+    if (loaded.turns[1]?.type === "error") {
+      expect(loaded.turns[1].input).toBe("bad q");
+      expect(loaded.turns[1].errorMessage).toBe("boom");
+    }
   });
 
   it("prune deletes everything past maxKeep", () => {

@@ -10,6 +10,7 @@ import {
 import {
   appendSessionStart,
   appendTurn,
+  appendError,
   type SessionMode,
 } from "../store/sessions.js";
 import { type Companion } from "../../companion-config.js";
@@ -62,7 +63,9 @@ export function Session({
     nawaituFactory,
     sessionId,
     (turn: TurnState): void => {
-      if (turn.output !== undefined && turn.trace !== undefined) {
+      if (turn.errorMessage !== undefined) {
+        appendError(sessionId, turn.input, turn.errorMessage, sessionsDir);
+      } else if (turn.output !== undefined && turn.trace !== undefined) {
         appendTurn(
           sessionId,
           turn.input,
