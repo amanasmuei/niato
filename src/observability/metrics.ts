@@ -1,10 +1,10 @@
 import { type TurnRecord } from "./trace.js";
 
 // Aggregated counts and rolling totals for one session, updated after every
-// turn settles. Lives on SessionContext to match the existing
-// `cumulativeCostUsd` ledger pattern. Production deployments that need
-// cross-process aggregation wire it through NawaituOptions.onTurnComplete
-// rather than reading this map.
+// turn settles. Single source of truth for per-session aggregates —
+// SessionContext exposes only `metrics`, not duplicate top-level fields.
+// Production deployments that need cross-process aggregation wire it
+// through NawaituOptions.onTurnComplete rather than reading this map.
 export interface SessionMetrics {
   turnCount: number;
   cumulativeCostUsd: number;
@@ -28,10 +28,9 @@ export function emptySessionMetrics(): SessionMetrics {
   };
 }
 
-// Folds a single TurnRecord into the rolling per-session metrics. Kept
-// pure (returns void by mutating the input) so it composes with the
-// existing `session.cumulativeCostUsd += trace.costUsd` pattern in
-// compose.run().
+// Folds a single TurnRecord into the rolling per-session metrics. Mutates
+// in place so the live SessionContext.metrics ledger updates without an
+// extra reassignment in compose.run().
 export function updateSessionMetrics(
   metrics: SessionMetrics,
   trace: TurnRecord,

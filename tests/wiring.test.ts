@@ -24,12 +24,12 @@ import { SUPPORT_STUB_SERVER_NAME } from "../src/packs/support/tools/support_stu
 const noopHook = () => Promise.resolve({ continue: true as const });
 
 function fakeSession(cumulativeCostUsd: number): SessionContext {
+  const metrics = emptySessionMetrics();
+  metrics.cumulativeCostUsd = cumulativeCostUsd;
   return {
     id: "test-session",
     createdAt: new Date(0),
-    turnCount: 0,
-    cumulativeCostUsd,
-    metrics: emptySessionMetrics(),
+    metrics,
   };
 }
 

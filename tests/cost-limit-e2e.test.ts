@@ -24,7 +24,7 @@ describe.skipIf(!apiKey)("cost-limit gate (E2E)", () => {
     // Real turns cost more than 0.0001 USD; the session ledger should now
     // be over the limit even though turn 1 itself ran (limit is checked at
     // turn-start, not mid-turn).
-    expect(turn1.session.cumulativeCostUsd).toBeGreaterThan(0.0001);
+    expect(turn1.session.metrics.cumulativeCostUsd).toBeGreaterThan(0.0001);
 
     await expect(
       nawaitu.run("explain how DNS works", turn1.session.id),

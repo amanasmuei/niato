@@ -56,8 +56,9 @@ export function ensureBudget(
   limitUsd: number | undefined,
 ): void {
   if (limitUsd === undefined) return;
-  if (session.cumulativeCostUsd >= limitUsd) {
-    throw new NawaituBudgetExceededError(session.cumulativeCostUsd, limitUsd);
+  const cumulative = session.metrics.cumulativeCostUsd;
+  if (cumulative >= limitUsd) {
+    throw new NawaituBudgetExceededError(cumulative, limitUsd);
   }
 }
 
@@ -117,7 +118,7 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
       logger.log("info", "turn start", {
         sessionId: session.id,
         turnId,
-        turn: session.turnCount + 1,
+        turn: session.metrics.turnCount + 1,
       });
 
       const classification = await classifier.classify(userInput);
@@ -130,8 +131,6 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
         hooks: orchestratorHooks,
       });
 
-      sessions.touch(session.id);
-
       const trace = buildTurnRecord({
         sessionId: session.id,
         turnId,
@@ -139,7 +138,9 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
         messages: orchestratorResult.messages,
         latencyMs: Date.now() - startedAt,
       });
-      session.cumulativeCostUsd += trace.costUsd;
+      // Single source of truth for per-session aggregates: turnCount,
+      // cumulative cost / latency, hook counts, error count all live in
+      // session.metrics and are folded in by updateSessionMetrics.
       updateSessionMetrics(session.metrics, trace);
       logger.log("info", "turn", { ...trace });
 

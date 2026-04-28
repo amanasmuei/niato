@@ -4,14 +4,13 @@ import {
   type SessionMetrics,
 } from "../observability/metrics.js";
 
+// Phase 8 cleanup: turnCount and cumulativeCostUsd previously lived as
+// top-level fields here AND inside metrics — kept in sync by two separate
+// lines of compose.run(). Consolidated to the metrics ledger so a future
+// contributor can't update one path and silently break the other.
 export interface SessionContext {
   id: string;
   createdAt: Date;
-  turnCount: number;
-  cumulativeCostUsd: number;
-  // Phase 7: rolling per-session aggregates (turn count, cumulative cost,
-  // latency, hook denial counts, dispatch counts, error count). Mutated
-  // by updateSessionMetrics in compose.run() after every turn settles.
   metrics: SessionMetrics;
 }
 
@@ -28,8 +27,6 @@ export class InMemorySessionStore {
     const session: SessionContext = {
       id: id ?? randomUUID(),
       createdAt: new Date(),
-      turnCount: 0,
-      cumulativeCostUsd: 0,
       metrics: emptySessionMetrics(),
     };
     this.sessions.set(session.id, session);
@@ -38,10 +35,5 @@ export class InMemorySessionStore {
 
   get(id: string): SessionContext | undefined {
     return this.sessions.get(id);
-  }
-
-  touch(id: string): void {
-    const session = this.sessions.get(id);
-    if (session) session.turnCount += 1;
   }
 }
