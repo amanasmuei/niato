@@ -1,0 +1,25 @@
+{"input": "Where is the function that handles user login?", "expected": {"domain": "dev_tools", "intent": "find_code"}, "notes": "locate-by-description"}
+{"input": "Find all callers of the parseConfig function.", "expected": {"domain": "dev_tools", "intent": "find_code"}, "notes": "named symbol, all references"}
+{"input": "Locate the file where rate limiting is implemented.", "expected": {"domain": "dev_tools", "intent": "find_code"}, "notes": "concept-to-file"}
+{"input": "Show me where we define the User type.", "expected": {"domain": "dev_tools", "intent": "find_code"}, "notes": "type definition lookup"}
+{"input": "Find usages of the legacy session API.", "expected": {"domain": "dev_tools", "intent": "find_code"}, "notes": "API usage scan"}
+{"input": "Where is the retry logic for failed Stripe webhooks?", "expected": {"domain": "dev_tools", "intent": "find_code"}, "notes": "domain-specific code search"}
+{"input": "How does the OAuth callback in src/auth/callback.ts work?", "expected": {"domain": "dev_tools", "intent": "explain_code"}, "notes": "explainer, file path provided"}
+{"input": "Walk me through the request lifecycle in our API server.", "expected": {"domain": "dev_tools", "intent": "explain_code"}, "notes": "control-flow walkthrough"}
+{"input": "Explain why we use a Map for the session store instead of a plain object.", "expected": {"domain": "dev_tools", "intent": "explain_code"}, "notes": "design-choice rationale"}
+{"input": "What does the retry logic in fetchWithBackoff do?", "expected": {"domain": "dev_tools", "intent": "explain_code"}, "notes": "function explanation"}
+{"input": "How is our pagination implemented in the user list endpoint?", "expected": {"domain": "dev_tools", "intent": "explain_code"}, "notes": "feature-level explanation"}
+{"input": "Explain the state machine in src/order/state.ts.", "expected": {"domain": "dev_tools", "intent": "explain_code"}, "notes": "structural explanation"}
+{"input": "The login flow returns 500 when the email contains a plus sign. Fix it.", "expected": {"domain": "dev_tools", "intent": "fix_bug"}, "notes": "explicit defect with directive"}
+{"input": "Tests in user_test.py are failing after the migration — diagnose and patch.", "expected": {"domain": "dev_tools", "intent": "fix_bug"}, "notes": "test-driven bug"}
+{"input": "There's a memory leak in the websocket handler. Find and fix.", "expected": {"domain": "dev_tools", "intent": "fix_bug"}, "notes": "performance bug"}
+{"input": "The retry logic isn't backing off correctly — patch the bug.", "expected": {"domain": "dev_tools", "intent": "fix_bug"}, "notes": "logic bug"}
+{"input": "Pagination skips the last page when count is an exact multiple of page size. Fix.", "expected": {"domain": "dev_tools", "intent": "fix_bug"}, "notes": "off-by-one"}
+{"input": "Race condition in cache invalidation — find the bug and patch it.", "expected": {"domain": "dev_tools", "intent": "fix_bug"}, "notes": "concurrency bug"}
+{"input": "The CI build at https://github.com/foo/bar/actions/runs/1234567 just failed. What broke?", "expected": {"domain": "dev_tools", "intent": "debug_ci"}, "notes": "github actions URL"}
+{"input": "Why is this failing? https://app.circleci.com/pipelines/github/foo/bar/123/workflows/abc", "expected": {"domain": "dev_tools", "intent": "debug_ci"}, "notes": "circleci URL"}
+{"input": "The build is red on PR #42 — investigate.", "expected": {"domain": "dev_tools", "intent": "debug_ci"}, "notes": "PR-level CI failure"}
+{"input": "Look at /tmp/ci-logs/build-456.log and tell me what failed.", "expected": {"domain": "dev_tools", "intent": "debug_ci"}, "notes": "local CI log path"}
+{"input": "Look at the code and fix whatever's wrong with it.", "expected": {"domain": "dev_tools", "intent": "fix_bug"}, "notes": "boundary: vague but action-oriented; only fix_bug involves changes"}
+{"input": "Why is this test failing?", "expected": {"domain": "dev_tools", "intent": "fix_bug"}, "notes": "boundary: 'why failing' surface but a failing test usually wants a patch — fix_bug over debug_ci"}
+{"input": "Walk me through how the auth flow is implemented.", "expected": {"domain": "dev_tools", "intent": "explain_code"}, "notes": "boundary: 'walk me through' is explainer; surface 'how implemented' could be find_code but the dominant intent is explanation"}

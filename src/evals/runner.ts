@@ -6,11 +6,13 @@ import {
 import { type Classifier } from "../core/classifier/types.js";
 import { genericPack } from "../packs/generic/index.js";
 import { supportPack } from "../packs/support/index.js";
+import { devToolsPack } from "../packs/dev-tools/index.js";
 import {
   runGenericEvals,
   type EvalReport,
 } from "../packs/generic/evals/runEvals.js";
 import { runSupportEvals } from "../packs/support/evals/runEvals.js";
+import { runDevToolsEvals } from "../packs/dev-tools/evals/runEvals.js";
 import { type DomainPack } from "../packs/DomainPack.js";
 
 interface PackEvalSpec {
@@ -32,6 +34,12 @@ const PACKS: Record<string, PackEvalSpec> = {
     threshold: 22,
     total: 25,
     run: runSupportEvals,
+  },
+  dev_tools: {
+    pack: devToolsPack,
+    threshold: 22,
+    total: 25,
+    run: runDevToolsEvals,
   },
 };
 

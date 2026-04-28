@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { createHaikuClassifier } from "../src/core/classifier/haiku.js";
-import { genericPack, supportPack } from "../src/index.js";
+import { devToolsPack, genericPack, supportPack } from "../src/index.js";
 import { runGenericEvals } from "../src/packs/generic/evals/runEvals.js";
 import { runSupportEvals } from "../src/packs/support/evals/runEvals.js";
+import { runDevToolsEvals } from "../src/packs/dev-tools/evals/runEvals.js";
 import {
   type EvalReport,
   type EvalCaseResult,
@@ -52,6 +53,17 @@ describe.skipIf(!apiKey)("evals: Support pack", () => {
       apiKey: apiKey ?? "",
     });
     const report = await runSupportEvals(classifier);
+    assertEvalReport(report, 22, 25);
+  }, 300_000);
+});
+
+describe.skipIf(!apiKey)("evals: Dev Tools pack", () => {
+  it("classifies at least 22/25 of the golden cases correctly", async () => {
+    const classifier = createHaikuClassifier({
+      packs: [devToolsPack],
+      apiKey: apiKey ?? "",
+    });
+    const report = await runDevToolsEvals(classifier);
     assertEvalReport(report, 22, 25);
   }, 300_000);
 });
