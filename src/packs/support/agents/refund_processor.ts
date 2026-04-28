@@ -1,12 +1,11 @@
 import { type AgentDefinition } from "@anthropic-ai/claude-agent-sdk";
+import { SupportStubTools } from "../tools/support_stub.js";
+import { REFUND_PROCESSOR_PROMPT } from "../prompts/index.js";
 
-// Placeholder. Real prompt and MCP tool wiring land in Phase 4 Step 3. The
-// dollar-limit and PII-redaction hooks gate this specialist's tool calls in
-// Step 4.
 export const refundProcessorAgent: AgentDefinition = {
   description:
-    "Issues refunds. Gated by an approval hook on dollar amount; refunds at or above the auto-approve threshold are denied and routed to escalate.",
-  prompt: "Phase 4 placeholder — replaced in Step 3.",
-  tools: [],
+    "Issues refunds against customer orders. Gated by the dollar-limit hook (refunds at or above the auto-approve threshold are denied and routed to escalate) and the PII-redaction hook (denies tool input containing credit-card or SSN patterns).",
+  prompt: REFUND_PROCESSOR_PROMPT,
+  tools: [SupportStubTools.issue_refund],
   model: "claude-sonnet-4-6",
 };

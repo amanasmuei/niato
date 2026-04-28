@@ -1,10 +1,11 @@
 import { type AgentDefinition } from "@anthropic-ai/claude-agent-sdk";
+import { SupportStubTools } from "../tools/support_stub.js";
+import { KB_SEARCH_PROMPT } from "../prompts/index.js";
 
-// Placeholder. Real prompt and MCP tool wiring land in Phase 4 Step 3.
 export const kbSearchAgent: AgentDefinition = {
   description:
-    "Read-only knowledge-base search. Use for billing questions, account help, and policy explanations that can be answered from the support KB.",
-  prompt: "Phase 4 placeholder — replaced in Step 3.",
-  tools: [],
+    "Read-only knowledge-base search. Use for billing questions, account help, and policy explanations the user can resolve themselves with the right information.",
+  prompt: KB_SEARCH_PROMPT,
+  tools: [SupportStubTools.search_kb],
   model: "claude-sonnet-4-6",
 };

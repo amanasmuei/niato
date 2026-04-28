@@ -79,6 +79,22 @@ describe("mergePackAgents", () => {
     ]);
   });
 
+  it("preserves Support specialists' MCP tool lists (one MCP tool each, no built-ins)", () => {
+    const merged = mergePackAgents([supportPack]);
+    expect(merged["support.ticket_lookup"]?.tools).toEqual([
+      "mcp__support_stub__lookup_ticket",
+    ]);
+    expect(merged["support.refund_processor"]?.tools).toEqual([
+      "mcp__support_stub__issue_refund",
+    ]);
+    expect(merged["support.kb_search"]?.tools).toEqual([
+      "mcp__support_stub__search_kb",
+    ]);
+    expect(merged["support.escalate"]?.tools).toEqual([
+      "mcp__support_stub__create_priority_ticket",
+    ]);
+  });
+
   it("preserves each specialist's tool list", () => {
     const merged = mergePackAgents([genericPack]);
     expect(merged["generic.retrieval"]?.tools).toEqual([
@@ -139,13 +155,21 @@ describe("unionAllowedTools", () => {
     );
   });
 
-  it("accepts MCP-prefixed tool names from a Phase 4 pack (no real names yet — wiring lands in Step 3)", () => {
-    // Step 2 just registers the MCP server; specialist `tools` arrays are
-    // still empty until Step 3. This test pins the union shape so Step 3's
-    // change is visible: adding a single mcp__support_stub__lookup_ticket
-    // entry will show up in this assertion.
+  it("includes the support_stub MCP tool names from each specialist", () => {
+    // Each Support specialist declares one MCP tool. The union allowlist
+    // exposes them at the orchestrator level — the orchestrator-restriction
+    // hook (Phase 3) is what blocks main-thread access; specialists call
+    // them via subagent dispatch.
     const tools = unionAllowedTools([supportPack]);
-    expect(tools).toEqual(["Agent"]);
+    expect(tools).toEqual(
+      expect.arrayContaining([
+        "Agent",
+        "mcp__support_stub__lookup_ticket",
+        "mcp__support_stub__search_kb",
+        "mcp__support_stub__issue_refund",
+        "mcp__support_stub__create_priority_ticket",
+      ]),
+    );
   });
 });
 
