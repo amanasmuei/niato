@@ -66,6 +66,39 @@ Two of the single-pack examples trip a hook intentionally:
 
 The cross-pack examples each dispatch more than one specialist in the same turn. The first does it sequentially (bug summary → ticket); the second does it in parallel (independent asks).
 
+### Have a multi-turn chat with your companion
+
+`pnpm chat` opens a persistent chat REPL with the persona of your choice. First run launches a guided setup wizard (companion name, your name, voice archetype, free-form description); the choice persists at `~/.nawaitu/companion.json` so subsequent runs drop straight into the chat.
+
+```bash
+$ pnpm chat
+Welcome. Let's set up your companion.
+
+Companion name: Layla
+Address you as (your name, optional): Aman
+Voice [warm/direct/playful] (default: warm): warm
+Anything else (optional): Faith-aware, walks alongside not above.
+
+✓ Saved to ~/.nawaitu/companion.json
+
+Layla · session 8861e2 · ctrl-D to exit
+
+> what is 2+2
+
+4 (via generic.retrieval).
+  ($0.04 · 18s · generic.retrieval)
+
+>
+```
+
+Same session ID across turns — the cost ledger and `SessionMetrics` aggregate naturally. Each turn is otherwise independent (no conversation memory yet — that's the Level 3 long-term-memory ask). Pass `--reset` to re-run the wizard.
+
+To launch as `arienz` instead of `pnpm chat`, add a one-line shell alias:
+
+```bash
+alias arienz='pnpm --silent --dir ~/Personals/nawaitu chat'
+```
+
 ### Watch a turn unfold in a TUI
 
 `pnpm dev:tui` renders the same turn through an Ink dashboard — phase progress, classifier result, dispatched specialists, per-model token usage, cost and latency — instead of a JSON log line. Single turn, exits when the run completes:
@@ -277,6 +310,8 @@ The check is strict: any drop in `passed` count fails. Case-count changes (i.e. 
 | Eval baseline | `tests/eval-baseline.test.ts` | Yes — read/write/check helpers |
 | Classifier schema | `tests/classifier-schema.test.ts` | Yes — locks `zodOutputFormat` shape against Anthropic API constraints |
 | Persona | `tests/persona.test.ts` | Yes — preamble construction + orchestrator system-prompt wiring |
+| Companion config | `tests/companion-config.test.ts` | Yes — load/save roundtrip + malformed/missing fallthrough |
+| Persona builder | `tests/persona-builder.test.ts` | Yes — Companion → Persona composition per voice archetype |
 | Smoke (E2E) | `tests/smoke.test.ts` | No — needs `ANTHROPIC_API_KEY` |
 | Support smoke (E2E) | `tests/support-smoke.test.ts` | No — three real turns, ~$0.15 |
 | Dev Tools smoke (E2E) | `tests/dev-tools-smoke.test.ts` | No — three real turns, ~$0.25; asserts sandbox-bash deny reason in the message stream |
