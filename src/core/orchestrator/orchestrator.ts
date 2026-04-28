@@ -6,7 +6,10 @@ import {
   type SDKMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { type DomainPack } from "../../packs/DomainPack.js";
-import { type IntentResult } from "../classifier/types.js";
+import {
+  type IntentResult,
+  type SecondaryIntent,
+} from "../classifier/types.js";
 import { BuiltinTools } from "../../tools/builtin.js";
 import { type Hooks, mergeHooks } from "../../guardrails/hooks.js";
 import { agentOnlyOrchestratorHook } from "../../guardrails/orchestrator-enforcement.js";
@@ -70,19 +73,27 @@ export function mergePackMcpServers(
   return merged;
 }
 
-function buildUserMessage(input: OrchestratorInput): string {
+export function buildUserMessage(input: OrchestratorInput): string {
   const recommended = pickRecommendedSpecialist(input);
   const recommendedLine =
     recommended === null
       ? "Recommended specialist: (none — no pack handles this classification)"
       : `Recommended specialist: ${recommended}`;
-  return [
+  const additional = pickAdditionalRecommendations(input);
+  const lines = [
     `Classification: ${JSON.stringify(input.classification)}`,
     recommendedLine,
-    "",
-    "User input:",
-    input.userInput,
-  ].join("\n");
+  ];
+  if (additional.length > 0) {
+    lines.push(
+      "Additional recommendations:",
+      ...additional.map(
+        (a) => `  - ${a.specialist} (confidence ${a.confidence.toFixed(2)})`,
+      ),
+    );
+  }
+  lines.push("", "User input:", input.userInput);
+  return lines.join("\n");
 }
 
 function pickRecommendedSpecialist(input: OrchestratorInput): string | null {
@@ -90,6 +101,41 @@ function pickRecommendedSpecialist(input: OrchestratorInput): string | null {
   if (!pack) return null;
   const specialist = pack.route(input.classification);
   return specialist === null ? null : `${pack.name}.${specialist}`;
+}
+
+interface AdditionalRecommendation {
+  specialist: string;
+  confidence: number;
+}
+
+// Resolve each cross-pack secondary intent into a fully-qualified
+// specialist key (`<pack>.<specialist>`). Drops entries the orchestrator
+// can't dispatch — unknown domains, intents the pack's router doesn't
+// recognize, or duplicates of the primary recommendation.
+export function pickAdditionalRecommendations(
+  input: OrchestratorInput,
+): AdditionalRecommendation[] {
+  const secondaries: SecondaryIntent[] =
+    input.classification.secondary ?? [];
+  if (secondaries.length === 0) return [];
+  const primary = pickRecommendedSpecialist(input);
+  const seen = new Set<string>(primary === null ? [] : [primary]);
+  const out: AdditionalRecommendation[] = [];
+  for (const s of secondaries) {
+    const pack = input.packs.find((p) => p.name === s.domain);
+    if (pack === undefined) continue;
+    const specialist = pack.route({
+      intent: s.intent,
+      domain: s.domain,
+      confidence: s.confidence,
+    });
+    if (specialist === null) continue;
+    const key = `${pack.name}.${specialist}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ specialist: key, confidence: s.confidence });
+  }
+  return out;
 }
 
 // Built-in `PreToolUse` hook prepended unconditionally — closes Phase 1's
