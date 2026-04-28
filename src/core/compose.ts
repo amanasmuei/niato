@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { type DomainPack } from "../packs/DomainPack.js";
 import { type Classifier, type IntentResult } from "./classifier/types.js";
@@ -9,6 +10,7 @@ import {
   type SessionContext,
 } from "../memory/session.js";
 import { createConsoleLogger, type Logger } from "../observability/log.js";
+import { buildTurnRecord, type TurnRecord } from "../observability/trace.js";
 import { loadConfig, type Config } from "./config.js";
 
 export interface NawaituOptions {
@@ -26,6 +28,7 @@ export interface NawaituTurn {
   classification: IntentResult;
   session: SessionContext;
   messages: SDKMessage[];
+  trace: TurnRecord;
 }
 
 export interface Nawaitu {
@@ -57,8 +60,12 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
   return {
     async run(userInput, sessionId) {
       const session = sessions.getOrCreate(sessionId);
+      const turnId = randomUUID();
+      const startedAt = Date.now();
+
       logger.log("info", "turn start", {
         sessionId: session.id,
+        turnId,
         turn: session.turnCount + 1,
       });
 
@@ -72,17 +79,22 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
       });
 
       sessions.touch(session.id);
-      logger.log("info", "turn end", {
+
+      const trace = buildTurnRecord({
         sessionId: session.id,
-        turn: session.turnCount,
-        resultLength: orchestratorResult.result.length,
+        turnId,
+        classification,
+        messages: orchestratorResult.messages,
+        latencyMs: Date.now() - startedAt,
       });
+      logger.log("info", "turn", trace as unknown as Record<string, unknown>);
 
       return {
         result: orchestratorResult.result,
         classification,
         session,
         messages: orchestratorResult.messages,
+        trace,
       };
     },
   };

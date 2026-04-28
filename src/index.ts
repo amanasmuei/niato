@@ -12,6 +12,12 @@ export type { Classifier, IntentResult } from "./core/classifier/types.js";
 export type { Config } from "./core/config.js";
 export type { Hooks } from "./guardrails/hooks.js";
 export type { Logger, LogLevel } from "./observability/log.js";
+export type {
+  TurnRecord,
+  TurnSpecialistRecord,
+  TurnTokenUsage,
+} from "./observability/trace.js";
+export { extractAgentDispatches } from "./observability/trace.js";
 export type { SessionContext } from "./memory/session.js";
 
 export { stubClassifier } from "./core/classifier/stub.js";
