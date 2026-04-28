@@ -15,20 +15,23 @@ The architecture is a series of declarations before actions: **classify, plan, g
 
 | Layer | Model | Why |
 | ----- | ----- | --- |
-| Classify | Haiku 4.5 | low-latency, cacheable system prompt, structured output |
+| Classify | Sonnet 4.6 | structured output via Agent SDK; same auth path as orchestrator (OAuth-capable) |
 | Plan | Opus 4.7 | dispatch decisions only — never executes work directly |
 | Specialist | Sonnet 4.6 | most actual work; tight tool allowlists per role |
 
 ## Quick start
 
-Requires Node 20.6+ and pnpm.
+Requires Node 20.6+ and pnpm. **Authenticate via either of:**
+
+- **API key** — set `ANTHROPIC_API_KEY` (developer API billing, per-token).
+- **Claude Max subscription** — run `claude /login` in Claude Code; Nawaitu picks up the OAuth session automatically (no env var needed). Costs roll against your Max quota; per-turn API spend drops to zero.
 
 ```bash
 pnpm install
-cp .env.example .env       # then fill in ANTHROPIC_API_KEY
+cp .env.example .env       # only if using API-key path; fill in ANTHROPIC_API_KEY
 pnpm typecheck             # tsc --noEmit
 pnpm lint                  # eslint
-pnpm test                  # vitest (E2E suites skip without ANTHROPIC_API_KEY)
+pnpm test                  # vitest (E2E suites skip when no auth is configured)
 ```
 
 The CLI auto-loads `.env` via Node's `--env-file` flag, so once your key is in place you can run a single turn directly:
@@ -258,6 +261,17 @@ interface TurnRecord {
 
 Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus cross-turn aggregation and `user_id` (added when ingress lands).
 
+## Auth modes
+
+Two paths into the Anthropic API; pick whichever matches your setup. Either is fine — the orchestrator and classifier both run through the Agent SDK, which auto-resolves auth.
+
+| Mode | Setup | Per-turn cost | When to use |
+| ---- | ----- | ------------- | ----------- |
+| **API key** | Set `ANTHROPIC_API_KEY` in `.env` | ~$0.15/turn against your API budget | Production deployments, CI, anywhere a developer API key is the right call |
+| **Claude Max subscription** | `claude /login` in Claude Code; leave `ANTHROPIC_API_KEY` unset | $0 — runs against your Max quota | Personal use, you already pay for Max, want to avoid double-billing |
+
+`createNawaitu()` logs the chosen path at startup (`auth mode: api_key` or `auth mode: oauth_subscription`). If both are configured, the env var wins.
+
 ## Observability
 
 Three layers, none of which require an external dependency:
@@ -334,6 +348,7 @@ The check is strict: any drop in `passed` count fails. Case-count changes (i.e. 
 | 6 | Cross-pack composition: `IntentResult.secondary` carries cross-pack triples; orchestrator surfaces `Additional recommendations:` with per-entry confidence; `pickAdditionalRecommendations` resolves them into `<pack>.<specialist>` keys; classifier multi-domain detection evals (≥7/8); cross-pack smoke asserts `bug_fixer → escalate` dispatch order. Live verification gated on the next budget reset. |
 | 7 | Observability: `guardrailsTriggered` wired from `SDKPermissionDenial`; per-session `SessionMetrics` aggregator; pluggable `onTurnComplete(trace)` callback; per-pack eval regression baselines (`--baseline` / `--write-baseline`); `nawaitu.metrics(sessionId)` lookup. |
 | 8 | Cleanup: consolidated session aggregates into `metrics` (dropped duplicate `cumulativeCostUsd` / `turnCount` fields). Level 1 persona: configurable user-facing identity prepended to the orchestrator's system prompt. |
+| 9 | OAuth subscription auth: classifier migrated from raw `@anthropic-ai/sdk` (API-key-only, Haiku) to `@anthropic-ai/claude-agent-sdk` (OAuth-capable, Sonnet 4.6). `ANTHROPIC_API_KEY` now optional; both paths flow through the SDK's auto-resolution. `pnpm chat` first-run wizard + persistent companion config at `~/.nawaitu/companion.json`. |
 
 Up next:
 
