@@ -6,7 +6,7 @@ Nawaitu is a TypeScript intent-routing agent built on the [Claude Agent SDK](htt
 
 ## Status
 
-**Phase 1 — Skeleton.** The full intent-routing loop is wired end-to-end with a stub classifier (always returns `{generic, question, 0.95}`) and the Generic pack's three specialists (retrieval, action, escalate). Phase 2 adds the real Haiku 4.5 classifier; Phase 3 adds the hooks/guardrails layer; Phase 4+ ship the Support and Dev Tools packs.
+**Phase 2 — Real classifier, evals, tracing.** The stub classifier has been replaced with a real Haiku 4.5 call (prompt caching + tool-based structured output). The Generic pack ships with 20 golden eval cases and a runner. Each turn emits a structured `TurnRecord` with classification, plan, per-specialist tool-call counts, per-model token usage, cost in USD, latency, and outcome. Phase 3 wires up the hooks/guardrails layer; Phase 4+ ship the Support and Dev Tools packs.
 
 ## Quick start
 
@@ -17,7 +17,8 @@ pnpm install
 cp .env.example .env       # then fill in ANTHROPIC_API_KEY
 pnpm typecheck             # tsc --noEmit
 pnpm lint                  # eslint
-pnpm test                  # vitest (smoke test skips without ANTHROPIC_API_KEY)
+pnpm test                  # vitest (smoke + evals skip without ANTHROPIC_API_KEY)
+pnpm eval generic          # run the Generic pack's golden eval suite (≥18/20 to pass)
 ```
 
 Run a single turn through the CLI driver:
@@ -36,35 +37,69 @@ import { createNawaitu, genericPack } from "nawaitu";
 const nawaitu = createNawaitu({ packs: [genericPack] });
 const turn = await nawaitu.run("explain how DNS works");
 console.log(turn.result);
+console.log(turn.trace); // TurnRecord — see "Tracing" below
 ```
 
-## What Phase 1 delivers vs defers
+## What Phase 2 delivers vs defers
 
-| Area              | Phase 1 |
+| Area              | Phase 2 |
 | ----------------- | ------- |
-| Classifier        | **Stub** — hardcoded `(generic, question, 0.95)`. Real Haiku call comes in Phase 2. |
+| Classifier        | **Real Haiku 4.5.** Tool-based structured output via `messages.parse()`; prompt caching enabled on the system prompt. Stub stays exported for tests that need to stay offline. |
 | Orchestrator      | Opus 4.7 with `Agent`-only dispatch (soft enforcement via system prompt; Phase 3 hardens via a `PreToolUse` hook). |
-| Generic pack      | Retrieval / action / escalate specialists, tool allowlists per `ARCHITECTURE.md` §7.1. |
+| Generic pack      | Retrieval / action / escalate specialists per `ARCHITECTURE.md` §7.1, plus 20 golden eval cases (8 questions, 6 tasks, 3 escalations, 3 boundary). |
+| Tracing           | Per-turn `TurnRecord` with classification, plan, per-specialist tool-call counts, per-model token usage, cost in USD, latency, outcome. Logged at `info`. |
+| Eval runner       | `pnpm eval generic` exits non-zero below ≥18/20 pass rate. Multi-pack runner deferred. |
 | Support / Dev Tools | Deferred (Phase 4+). |
-| Hooks framework   | Type placeholder only; not wired into the orchestrator. |
+| Hooks framework   | Type placeholder only; not yet wired into the orchestrator. |
 | Memory            | In-memory session map. Long-term store and skills loader come later. |
-| Observability     | Console JSON logger only. Tracing / cost accounting in Phase 7. |
 | MCP servers       | None loaded. Built-in SDK tools only. |
-| Evals             | Deferred to Phase 2 (the first pack ships with 20 golden cases then). |
+| Cost dashboards / OTel tracing | Phase 7. The `costUsd` field is populated per turn but not aggregated. |
 
-## Smoke test
+## Tracing
 
-`tests/smoke.test.ts` sends `"what is 2+2"` through the full loop and asserts a `tool_use` block with `name: "Agent"` and `subagent_type: "generic.retrieval"` appears in the message stream. It costs a small number of tokens against the real API and is **skipped automatically when `ANTHROPIC_API_KEY` is unset**, so CI without a key stays green via the offline `tests/wiring.test.ts` suite.
+Each call to `nawaitu.run()` returns a `TurnRecord` (also logged at `info`):
 
-To run it locally:
+```ts
+interface TurnRecord {
+  sessionId: string;
+  turnId: string;                                 // uuid generated per turn
+  classification: IntentResult;                   // { intent, domain, confidence, urgency? }
+  plan: string[];                                 // specialist names dispatched, in order
+  specialists: { name: string; toolCalls: number }[];
+  tokensByModel: Record<string, {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadInputTokens: number;
+    cacheCreationInputTokens: number;
+  }>;
+  costUsd: number;                                // SDK-reported total
+  latencyMs: number;                              // wall clock, includes classifier
+  outcome: "success" | "error";
+  guardrailsTriggered: string[];                  // empty until Phase 3
+}
+```
+
+Match the per-turn record shape from `ARCHITECTURE.md` §11 minus `cost_usd`'s aggregation and `user_id` (added when ingress lands).
+
+## Tests and evals
+
+| Suite | Path | Runs without API key? |
+| ----- | ---- | --------------------- |
+| Wiring | `tests/wiring.test.ts` | Yes — assembly assertions only |
+| Classifier unit | `tests/classifier.test.ts` | Yes — Anthropic SDK is `vi.mock`'d |
+| Smoke (E2E) | `tests/smoke.test.ts` | **No** — skipped without `ANTHROPIC_API_KEY` |
+| Generic evals | `tests/evals.test.ts` | **No** — skipped without `ANTHROPIC_API_KEY`; ≥18/20 to pass |
+
+Run with a real key:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-… pnpm test
+ANTHROPIC_API_KEY=sk-ant-… pnpm eval generic
 ```
 
 ## Layout
 
-Follows `ARCHITECTURE.md` §13. Phase 1 fills `src/core/`, `src/packs/generic/`, and minimal placeholders under `src/guardrails/`, `src/memory/`, and `src/observability/`.
+Follows `ARCHITECTURE.md` §13. Phase 2 adds `src/core/classifier/{prompt.md,prompt.ts,haiku.ts}`, `src/observability/trace.ts`, `src/packs/generic/evals/`, and `src/evals/runner.ts`.
 
 ## Conventions
 
