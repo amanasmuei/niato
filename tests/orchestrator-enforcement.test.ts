@@ -61,6 +61,22 @@ describe("agentOnlyOrchestratorHook", () => {
     expect(getPreToolUseDeny(result)?.reason).toContain("Bash");
   });
 
+  // Phase 4 regression: once a pack registers an in-process MCP server, the
+  // server's tool names enter `Options.allowedTools` via `unionAllowedTools`.
+  // The orchestrator could in principle call the MCP tool directly from the
+  // main thread; this hook is the only thing stopping that. Locks the
+  // invariant in place ahead of the Support pack's `support_stub` MCP.
+  it("denies a main-thread call to a pack-provided MCP tool", async () => {
+    const result = await agentOnlyOrchestratorHook(
+      preToolUseInput({ tool_name: "mcp__support_stub__issue_refund" }),
+      "tool-use-mcp",
+      noopOptions,
+    );
+    expect(getPreToolUseDeny(result)?.reason).toContain(
+      "mcp__support_stub__issue_refund",
+    );
+  });
+
   it("allows a main-thread Agent dispatch", async () => {
     const result = await agentOnlyOrchestratorHook(
       preToolUseInput({ tool_name: "Agent" }),

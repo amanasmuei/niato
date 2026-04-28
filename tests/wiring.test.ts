@@ -5,6 +5,7 @@ import {
   mergeHooks,
   mergePackAgents,
   stubClassifier,
+  supportPack,
   NawaituBudgetExceededError,
   type Config,
   type Hooks,
@@ -60,6 +61,19 @@ describe("mergePackAgents", () => {
     ]);
   });
 
+  it("namespaces multiple packs without collision", () => {
+    const merged = mergePackAgents([genericPack, supportPack]);
+    expect(Object.keys(merged).sort()).toEqual([
+      "generic.action",
+      "generic.escalate",
+      "generic.retrieval",
+      "support.escalate",
+      "support.kb_search",
+      "support.refund_processor",
+      "support.ticket_lookup",
+    ]);
+  });
+
   it("preserves each specialist's tool list", () => {
     const merged = mergePackAgents([genericPack]);
     expect(merged["generic.retrieval"]?.tools).toEqual([
@@ -87,6 +101,45 @@ describe("stubClassifier", () => {
       domain: "generic",
       confidence: 0.95,
     });
+  });
+});
+
+describe("supportPack.route", () => {
+  it.each([
+    ["order_status", "ticket_lookup"],
+    ["refund_request", "refund_processor"],
+    ["billing_question", "kb_search"],
+    ["account_help", "kb_search"],
+    ["complaint", "escalate"],
+  ])("maps %s → %s", (intent, expected) => {
+    expect(
+      supportPack.route({
+        intent,
+        domain: "support",
+        confidence: 1,
+      }),
+    ).toBe(expected);
+  });
+
+  it("returns null for unknown intents", () => {
+    expect(
+      supportPack.route({
+        intent: "unknown_intent",
+        domain: "support",
+        confidence: 1,
+      }),
+    ).toBeNull();
+  });
+
+  it("declares the five Support intents from ARCHITECTURE.md §7.2", () => {
+    const intentNames = supportPack.intents.map((i) => i.name).sort();
+    expect(intentNames).toEqual([
+      "account_help",
+      "billing_question",
+      "complaint",
+      "order_status",
+      "refund_request",
+    ]);
   });
 });
 
