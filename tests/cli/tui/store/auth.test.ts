@@ -39,7 +39,7 @@ describe("auth store", () => {
     process.env["ANTHROPIC_API_KEY"] = "from-env";
     const r = resolveAuth(path);
     expect(r?.mode).toBe("api-key");
-    expect(r?.apiKey).toBe("from-env");
+    if (r?.mode === "api-key") expect(r.apiKey).toBe("from-env");
   });
 
   it("falls back to file when no env", () => {
@@ -58,6 +58,16 @@ describe("auth store", () => {
     saveAuth({ mode: "api-key", apiKey: "k" }, path);
     // Overwrite with garbage
     fsWriteFileSync(path, "not-json");
+    expect(loadAuth(path)).toBeNull();
+  });
+
+  it("rejects api-key record with missing apiKey as malformed", () => {
+    fsWriteFileSync(path, JSON.stringify({ mode: "api-key" }));
+    expect(loadAuth(path)).toBeNull();
+  });
+
+  it("rejects records with unknown mode value as malformed", () => {
+    fsWriteFileSync(path, JSON.stringify({ mode: "hacked" }));
     expect(loadAuth(path)).toBeNull();
   });
 });

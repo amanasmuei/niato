@@ -7,31 +7,35 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
+import { z } from "zod";
 
-export type AuthMode = "subscription" | "api-key";
+// Persisted auth configuration. Lives at ~/.nawaitu/auth.json by default,
+// chmod 600. Resolution precedence at runtime: ANTHROPIC_API_KEY env var
+// (when non-empty) > stored file > null. The discriminated-union schema
+// enforces the invariant that api-key mode always carries a non-empty
+// key — files that fail this check are treated as malformed and rejected,
+// same shape as companion-config.ts.
 
-export interface AuthState {
-  mode: AuthMode;
-  apiKey?: string;
-}
+export const AUTH_MODES = ["subscription", "api-key"] as const;
+export type AuthMode = (typeof AUTH_MODES)[number];
+
+export const AuthSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("subscription") }),
+  z.object({ mode: z.literal("api-key"), apiKey: z.string().min(1) }),
+]);
+
+export type AuthState = z.infer<typeof AuthSchema>;
 
 export function defaultAuthPath(): string {
   return join(homedir(), ".nawaitu", "auth.json");
 }
 
+// Returns null on missing file, malformed JSON, or schema-invalid content.
+// All three failure modes are treated identically — caller re-runs setup.
 export function loadAuth(path: string = defaultAuthPath()): AuthState | null {
   if (!existsSync(path)) return null;
   try {
-    // Cast: JSON.parse returns `any`; we narrow by inspecting fields below.
-    const obj = JSON.parse(readFileSync(path, "utf8")) as Partial<AuthState>;
-    if (obj.mode !== "subscription" && obj.mode !== "api-key") return null;
-    if (obj.mode === "api-key") {
-      return {
-        mode: "api-key",
-        ...(typeof obj.apiKey === "string" ? { apiKey: obj.apiKey } : {}),
-      };
-    }
-    return { mode: "subscription" };
+    return AuthSchema.parse(JSON.parse(readFileSync(path, "utf8")));
   } catch {
     return null;
   }
