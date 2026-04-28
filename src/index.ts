@@ -7,6 +7,7 @@ export type {
 
 export { genericPack } from "./packs/generic/index.js";
 export { supportPack } from "./packs/support/index.js";
+export { devToolsPack } from "./packs/dev-tools/index.js";
 
 export type { DomainPack, IntentDefinition } from "./packs/DomainPack.js";
 export type { Classifier, IntentResult } from "./core/classifier/types.js";

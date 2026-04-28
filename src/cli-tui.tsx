@@ -5,6 +5,7 @@ import { createNawaitu } from "./core/compose.js";
 import { type DomainPack } from "./packs/DomainPack.js";
 import { genericPack } from "./packs/generic/index.js";
 import { supportPack } from "./packs/support/index.js";
+import { devToolsPack } from "./packs/dev-tools/index.js";
 import { type Logger } from "./observability/log.js";
 import { type IntentResult } from "./core/classifier/types.js";
 import { type TurnRecord } from "./observability/trace.js";
@@ -281,7 +282,10 @@ async function main(): Promise<void> {
   }
 
   const { waitUntilExit } = render(
-    <App packs={[genericPack, supportPack]} userInput={userInput} />,
+    <App
+      packs={[genericPack, supportPack, devToolsPack]}
+      userInput={userInput}
+    />,
   );
   await waitUntilExit();
 }

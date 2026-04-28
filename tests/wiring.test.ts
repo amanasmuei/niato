@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createNawaitu,
+  devToolsPack,
   genericPack,
   mergeHooks,
   mergePackAgents,
@@ -66,9 +67,13 @@ describe("mergePackAgents", () => {
     ]);
   });
 
-  it("namespaces multiple packs without collision", () => {
-    const merged = mergePackAgents([genericPack, supportPack]);
+  it("namespaces three packs without collision", () => {
+    const merged = mergePackAgents([genericPack, supportPack, devToolsPack]);
     expect(Object.keys(merged).sort()).toEqual([
+      "dev_tools.bug_fixer",
+      "dev_tools.ci_debugger",
+      "dev_tools.code_explainer",
+      "dev_tools.codebase_search",
       "generic.action",
       "generic.escalate",
       "generic.retrieval",
@@ -208,6 +213,43 @@ describe("supportPack.route", () => {
       "complaint",
       "order_status",
       "refund_request",
+    ]);
+  });
+});
+
+describe("devToolsPack.route", () => {
+  it.each([
+    ["find_code", "codebase_search"],
+    ["explain_code", "code_explainer"],
+    ["fix_bug", "bug_fixer"],
+    ["debug_ci", "ci_debugger"],
+  ])("maps %s → %s", (intent, expected) => {
+    expect(
+      devToolsPack.route({
+        intent,
+        domain: "dev_tools",
+        confidence: 1,
+      }),
+    ).toBe(expected);
+  });
+
+  it("returns null for unknown intents (e.g. create_pr deferred to a later phase)", () => {
+    expect(
+      devToolsPack.route({
+        intent: "create_pr",
+        domain: "dev_tools",
+        confidence: 1,
+      }),
+    ).toBeNull();
+  });
+
+  it("declares the four Phase 5 Dev Tools intents (create_pr deferred)", () => {
+    const intentNames = devToolsPack.intents.map((i) => i.name).sort();
+    expect(intentNames).toEqual([
+      "debug_ci",
+      "explain_code",
+      "find_code",
+      "fix_bug",
     ]);
   });
 });
