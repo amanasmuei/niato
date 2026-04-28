@@ -1,0 +1,25 @@
+{"input": "Where is my order ORD-12345? It's been a week.", "expected": {"domain": "support", "intent": "order_status"}, "notes": "explicit order ID, status query"}
+{"input": "Has the package for ticket TKT-9876 shipped yet?", "expected": {"domain": "support", "intent": "order_status"}, "notes": "ticket ID, shipment status"}
+{"input": "I'd like to check the status of order ORD-555.", "expected": {"domain": "support", "intent": "order_status"}, "notes": "polite status check"}
+{"input": "What's happening with TKT-3344?", "expected": {"domain": "support", "intent": "order_status"}, "notes": "minimal context, ticket reference"}
+{"input": "When will my package arrive? Order ORD-1111.", "expected": {"domain": "support", "intent": "order_status"}, "notes": "delivery ETA"}
+{"input": "I want a refund for order ORD-12345 — it arrived broken.", "expected": {"domain": "support", "intent": "refund_request"}, "notes": "explicit refund + reason"}
+{"input": "Please refund my last purchase, the wrong size.", "expected": {"domain": "support", "intent": "refund_request"}, "notes": "polite refund, reason given"}
+{"input": "Can I get my money back on order ORD-9876?", "expected": {"domain": "support", "intent": "refund_request"}, "notes": "informal phrasing"}
+{"input": "Issue a refund for the duplicate charge of $15.", "expected": {"domain": "support", "intent": "refund_request"}, "notes": "directive refund, dollar amount"}
+{"input": "I need a $50 refund on order ORD-2233 because it never shipped.", "expected": {"domain": "support", "intent": "refund_request"}, "notes": "refund w/ amount above auto-approve threshold"}
+{"input": "Why does my bank statement show ACME*ORDERS instead of your company name?", "expected": {"domain": "support", "intent": "billing_question"}, "notes": "billing descriptor question, KB-answerable"}
+{"input": "What payment methods do you accept?", "expected": {"domain": "support", "intent": "billing_question"}, "notes": "payment options, KB-answerable"}
+{"input": "Do you charge sales tax on shipping?", "expected": {"domain": "support", "intent": "billing_question"}, "notes": "tax policy"}
+{"input": "How does the billing cycle work for monthly subscriptions?", "expected": {"domain": "support", "intent": "billing_question"}, "notes": "subscription billing question"}
+{"input": "How do I change the email address on my account?", "expected": {"domain": "support", "intent": "account_help"}, "notes": "self-service email update"}
+{"input": "I forgot my password — how do I reset it?", "expected": {"domain": "support", "intent": "account_help"}, "notes": "password reset"}
+{"input": "Can I link two accounts together?", "expected": {"domain": "support", "intent": "account_help"}, "notes": "account merge question"}
+{"input": "How do I update my shipping address for future orders?", "expected": {"domain": "support", "intent": "account_help"}, "notes": "address update; not about a specific order"}
+{"input": "This is the third time I've had to contact you about this. I'm furious.", "expected": {"domain": "support", "intent": "complaint"}, "notes": "explicit frustration, repeat contact"}
+{"input": "Your customer service has been completely useless.", "expected": {"domain": "support", "intent": "complaint"}, "notes": "direct complaint about service"}
+{"input": "I'd like to speak to a manager — I am very unhappy.", "expected": {"domain": "support", "intent": "complaint"}, "notes": "manager request + dissatisfaction"}
+{"input": "I've been waiting for two weeks and no one has responded. This is unacceptable.", "expected": {"domain": "support", "intent": "complaint"}, "notes": "service-failure complaint"}
+{"input": "I want a refund and I want a manager.", "expected": {"domain": "support", "intent": "complaint"}, "notes": "boundary: refund + escalation; the manager request signals complaint dominance over refund_request"}
+{"input": "Where is the refund I asked for last week? Order ORD-99.", "expected": {"domain": "support", "intent": "order_status"}, "notes": "boundary: 'refund' surface but asking about status of an existing refund — order_status, not a new refund_request"}
+{"input": "Why is my account flagged for review?", "expected": {"domain": "support", "intent": "account_help"}, "notes": "boundary: could read as billing_question or complaint; account-state question is account_help"}

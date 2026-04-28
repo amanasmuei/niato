@@ -1,35 +1,64 @@
 import { loadConfig } from "../core/config.js";
-import { createHaikuClassifier } from "../core/classifier/haiku.js";
+import {
+  createHaikuClassifier,
+  type HaikuClassifierOptions,
+} from "../core/classifier/haiku.js";
+import { type Classifier } from "../core/classifier/types.js";
 import { genericPack } from "../packs/generic/index.js";
-import { runGenericEvals, type EvalReport } from "../packs/generic/evals/runEvals.js";
+import { supportPack } from "../packs/support/index.js";
+import {
+  runGenericEvals,
+  type EvalReport,
+} from "../packs/generic/evals/runEvals.js";
+import { runSupportEvals } from "../packs/support/evals/runEvals.js";
+import { type DomainPack } from "../packs/DomainPack.js";
 
-const PASS_THRESHOLD = 18; // ≥ 90% of 20 cases
+interface PackEvalSpec {
+  pack: DomainPack;
+  threshold: number;
+  total: number;
+  run: (classifier: Classifier) => Promise<EvalReport>;
+}
+
+const PACKS: Record<string, PackEvalSpec> = {
+  generic: {
+    pack: genericPack,
+    threshold: 18,
+    total: 20,
+    run: runGenericEvals,
+  },
+  support: {
+    pack: supportPack,
+    threshold: 22,
+    total: 25,
+    run: runSupportEvals,
+  },
+};
 
 async function main(): Promise<void> {
   const packName = process.argv[2];
   if (!packName) {
-    console.error("usage: pnpm eval <pack-name>");
+    console.error(`usage: pnpm eval <${Object.keys(PACKS).join("|")}>`);
+    process.exit(2);
+  }
+
+  const spec = PACKS[packName];
+  if (!spec) {
+    console.error(
+      `Unknown pack: ${packName}. Available: ${Object.keys(PACKS).join(", ")}`,
+    );
     process.exit(2);
   }
 
   const config = loadConfig();
-  const classifier = createHaikuClassifier({
-    packs: [genericPack],
+  const classifierOptions: HaikuClassifierOptions = {
+    packs: [spec.pack],
     apiKey: config.ANTHROPIC_API_KEY,
-  });
+  };
+  const classifier = createHaikuClassifier(classifierOptions);
 
-  let report: EvalReport;
-  switch (packName) {
-    case "generic":
-      console.log(`Running evals for pack: ${packName}`);
-      report = await runGenericEvals(classifier);
-      break;
-    default:
-      console.error(
-        `Unknown pack: ${packName}. Phase 2 only supports 'generic'.`,
-      );
-      process.exit(2);
-  }
+  console.log(`Running evals for pack: ${packName}`);
+  const report = await spec.run(classifier);
 
   console.log(
     `\nResults: ${String(report.passed)}/${String(report.total)} passed`,
@@ -47,14 +76,14 @@ async function main(): Promise<void> {
     }
   }
 
-  if (report.passed < PASS_THRESHOLD) {
+  if (report.passed < spec.threshold) {
     console.error(
-      `\nPass threshold not met: ${String(report.passed)}/${String(report.total)} (required ≥ ${String(PASS_THRESHOLD)})`,
+      `\nPass threshold not met: ${String(report.passed)}/${String(report.total)} (required ≥ ${String(spec.threshold)})`,
     );
     process.exit(1);
   }
   console.log(
-    `\nPass threshold met (≥ ${String(PASS_THRESHOLD)}/${String(report.total)}).`,
+    `\nPass threshold met (≥ ${String(spec.threshold)}/${String(report.total)}).`,
   );
 }
 
