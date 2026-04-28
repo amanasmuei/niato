@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createHaikuClassifier } from "../src/core/classifier/haiku.js";
+import { createSonnetClassifier } from "../src/core/classifier/sonnet.js";
 import { devToolsPack, genericPack, supportPack } from "../src/index.js";
 import { runGenericEvals } from "../src/packs/generic/evals/runEvals.js";
 import { runSupportEvals } from "../src/packs/support/evals/runEvals.js";
@@ -9,7 +9,14 @@ import {
   type EvalCaseResult,
 } from "../src/packs/generic/evals/runEvals.js";
 
-const apiKey = process.env["ANTHROPIC_API_KEY"];
+// E2E evals run when either ANTHROPIC_API_KEY is set OR Claude Code OAuth
+// is available — the Agent SDK's `query()` resolves auth from either path.
+// Today's heuristic: skip when no env var is set so test runs without a
+// configured API key still pass offline. CI environments with OAuth-only
+// auth can opt-in via `NAWAITU_LIVE_EVALS=1`.
+const liveAuth =
+  process.env["ANTHROPIC_API_KEY"] !== undefined ||
+  process.env["NAWAITU_LIVE_EVALS"] === "1";
 
 function summarizeFailures(failures: EvalCaseResult[]): string {
   return failures
@@ -35,34 +42,25 @@ function assertEvalReport(
   expect(report.total).toBe(expectedTotal);
 }
 
-describe.skipIf(!apiKey)("evals: Generic pack", () => {
+describe.skipIf(!liveAuth)("evals: Generic pack", () => {
   it("classifies at least 18/20 of the golden cases correctly", async () => {
-    const classifier = createHaikuClassifier({
-      packs: [genericPack],
-      apiKey: apiKey ?? "",
-    });
+    const classifier = createSonnetClassifier({ packs: [genericPack] });
     const report = await runGenericEvals(classifier);
     assertEvalReport(report, 18, 20);
   }, 300_000);
 });
 
-describe.skipIf(!apiKey)("evals: Support pack", () => {
+describe.skipIf(!liveAuth)("evals: Support pack", () => {
   it("classifies at least 22/25 of the golden cases correctly", async () => {
-    const classifier = createHaikuClassifier({
-      packs: [supportPack],
-      apiKey: apiKey ?? "",
-    });
+    const classifier = createSonnetClassifier({ packs: [supportPack] });
     const report = await runSupportEvals(classifier);
     assertEvalReport(report, 22, 25);
   }, 300_000);
 });
 
-describe.skipIf(!apiKey)("evals: Dev Tools pack", () => {
+describe.skipIf(!liveAuth)("evals: Dev Tools pack", () => {
   it("classifies at least 22/25 of the golden cases correctly", async () => {
-    const classifier = createHaikuClassifier({
-      packs: [devToolsPack],
-      apiKey: apiKey ?? "",
-    });
+    const classifier = createSonnetClassifier({ packs: [devToolsPack] });
     const report = await runDevToolsEvals(classifier);
     assertEvalReport(report, 22, 25);
   }, 300_000);

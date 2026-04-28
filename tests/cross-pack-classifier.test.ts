@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createHaikuClassifier } from "../src/core/classifier/haiku.js";
+import { createSonnetClassifier } from "../src/core/classifier/sonnet.js";
 import { devToolsPack, genericPack, supportPack } from "../src/index.js";
 import { type IntentResult } from "../src/core/classifier/types.js";
 
@@ -90,9 +90,8 @@ const CASES: CrossPackCase[] = [
 
 describe.skipIf(!apiKey)("cross-pack classifier evals", () => {
   it("scores at least 7/8 of the multi-domain detection cases correctly", async () => {
-    const classifier = createHaikuClassifier({
+    const classifier = createSonnetClassifier({
       packs: [genericPack, supportPack, devToolsPack],
-      apiKey: apiKey ?? "",
     });
 
     interface RunResult {

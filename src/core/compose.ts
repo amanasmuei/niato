@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { type DomainPack } from "../packs/DomainPack.js";
 import { type Classifier, type IntentResult } from "./classifier/types.js";
-import { createHaikuClassifier } from "./classifier/haiku.js";
+import { createSonnetClassifier } from "./classifier/sonnet.js";
 import { runOrchestrator } from "./orchestrator/orchestrator.js";
 import { type Hooks, mergeHooks } from "../guardrails/hooks.js";
 import {
@@ -90,9 +90,8 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
     options.logger ?? createConsoleLogger(config.NAWAITU_LOG_LEVEL);
   const classifier =
     options.classifier ??
-    createHaikuClassifier({
+    createSonnetClassifier({
       packs: options.packs,
-      apiKey: config.ANTHROPIC_API_KEY,
     });
   const sessions = new InMemorySessionStore();
 

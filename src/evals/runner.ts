@@ -1,10 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { loadConfig } from "../core/config.js";
-import {
-  createHaikuClassifier,
-  type HaikuClassifierOptions,
-} from "../core/classifier/haiku.js";
+import { createSonnetClassifier } from "../core/classifier/sonnet.js";
 import { type Classifier } from "../core/classifier/types.js";
 import { genericPack } from "../packs/generic/index.js";
 import { supportPack } from "../packs/support/index.js";
@@ -122,12 +119,11 @@ async function main(): Promise<void> {
   const flags = parseFlags(args.slice(1));
   const baselinePath = flags.baselinePath ?? spec.defaultBaselinePath;
 
-  const config = loadConfig();
-  const classifierOptions: HaikuClassifierOptions = {
-    packs: [spec.pack],
-    apiKey: config.ANTHROPIC_API_KEY,
-  };
-  const classifier = createHaikuClassifier(classifierOptions);
+  // loadConfig is still called for early failure on a malformed env, but
+  // ANTHROPIC_API_KEY is no longer required — Phase 9 lets the Agent SDK
+  // resolve auth from either env var or Claude Code OAuth login.
+  loadConfig();
+  const classifier = createSonnetClassifier({ packs: [spec.pack] });
 
   console.log(`Running evals for pack: ${packName}`);
   const report = await spec.run(classifier);
