@@ -12,7 +12,7 @@ import {
   type Hooks,
   type SessionContext,
 } from "../src/index.js";
-import { loadConfig } from "../src/core/config.js";
+import { loadConfig, resolveAuthMode } from "../src/core/config.js";
 import { ensureBudget } from "../src/core/compose.js";
 import { emptySessionMetrics } from "../src/observability/metrics.js";
 import {
@@ -390,13 +390,31 @@ describe("ensureBudget", () => {
 });
 
 describe("loadConfig", () => {
-  it("throws when ANTHROPIC_API_KEY is missing", () => {
-    expect(() => loadConfig({})).toThrow(/ANTHROPIC_API_KEY/);
+  it("succeeds without ANTHROPIC_API_KEY (Phase 9: OAuth path)", () => {
+    const cfg = loadConfig({});
+    expect(cfg.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(cfg.NAWAITU_LOG_LEVEL).toBe("info");
   });
 
-  it("succeeds with ANTHROPIC_API_KEY set", () => {
+  it("succeeds with ANTHROPIC_API_KEY set (API-key path)", () => {
     const cfg = loadConfig({ ANTHROPIC_API_KEY: "sk-test" });
     expect(cfg.ANTHROPIC_API_KEY).toBe("sk-test");
     expect(cfg.NAWAITU_LOG_LEVEL).toBe("info");
+  });
+
+  it("rejects an empty-string ANTHROPIC_API_KEY", () => {
+    expect(() => loadConfig({ ANTHROPIC_API_KEY: "" })).toThrow();
+  });
+});
+
+describe("resolveAuthMode", () => {
+  it("returns 'api_key' when ANTHROPIC_API_KEY is set", () => {
+    expect(
+      resolveAuthMode(loadConfig({ ANTHROPIC_API_KEY: "sk-test" })),
+    ).toBe("api_key");
+  });
+
+  it("returns 'oauth_subscription' when ANTHROPIC_API_KEY is unset", () => {
+    expect(resolveAuthMode(loadConfig({}))).toBe("oauth_subscription");
   });
 });

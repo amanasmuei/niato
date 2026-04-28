@@ -24,7 +24,7 @@ import {
   type SessionMetrics,
 } from "../observability/metrics.js";
 import { type Persona } from "./persona.js";
-import { loadConfig, type Config } from "./config.js";
+import { loadConfig, resolveAuthMode, type Config } from "./config.js";
 
 export interface NawaituOptions {
   packs: DomainPack[];
@@ -88,6 +88,10 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
   const config = options.config ?? loadConfig();
   const logger =
     options.logger ?? createConsoleLogger(config.NAWAITU_LOG_LEVEL);
+  // Phase 9: log which auth mode the SDK will use so the path is never
+  // ambiguous. Both modes go through the Agent SDK's auto-resolution;
+  // this is purely an operational signal for the user.
+  logger.log("info", "auth mode", { mode: resolveAuthMode(config) });
   const classifier =
     options.classifier ??
     createSonnetClassifier({
