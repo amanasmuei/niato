@@ -11,6 +11,8 @@ export type { DomainPack, IntentDefinition } from "./packs/DomainPack.js";
 export type { Classifier, IntentResult } from "./core/classifier/types.js";
 export type { Config } from "./core/config.js";
 export type { Hooks } from "./guardrails/hooks.js";
+export { mergeHooks } from "./guardrails/hooks.js";
+export { agentOnlyOrchestratorHook } from "./guardrails/orchestrator-enforcement.js";
 export type { Logger, LogLevel } from "./observability/log.js";
 export type {
   TurnRecord,

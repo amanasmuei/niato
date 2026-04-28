@@ -4,7 +4,7 @@ import { type DomainPack } from "../packs/DomainPack.js";
 import { type Classifier, type IntentResult } from "./classifier/types.js";
 import { createHaikuClassifier } from "./classifier/haiku.js";
 import { runOrchestrator } from "./orchestrator/orchestrator.js";
-import { type Hooks } from "../guardrails/hooks.js";
+import { type Hooks, mergeHooks } from "../guardrails/hooks.js";
 import {
   InMemorySessionStore,
   type SessionContext,
@@ -16,9 +16,10 @@ import { loadConfig, type Config } from "./config.js";
 export interface NawaituOptions {
   packs: DomainPack[];
   classifier?: Classifier;
-  // Accepted for forward compatibility; not yet wired into the orchestrator
-  // (Phase 3 — see ARCHITECTURE.md §10).
-  hooks?: Hooks;
+  // Hooks applied to every orchestrator session. Each pack may also declare
+  // pack-scoped hooks; the orchestrator merges built-in invariants → global
+  // hooks → pack hooks (in that order) and passes the result to the SDK.
+  globalHooks?: Hooks;
   config?: Config;
   logger?: Logger;
 }
@@ -50,12 +51,11 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
   if (options.packs.length === 0) {
     throw new Error("createNawaitu: at least one DomainPack is required");
   }
-  if (options.hooks !== undefined) {
-    logger.log(
-      "warn",
-      "Phase 1: hooks accepted but not wired through to the orchestrator yet (see ARCHITECTURE.md §10).",
-    );
-  }
+
+  const orchestratorHooks = mergeHooks(
+    options.globalHooks ?? {},
+    ...options.packs.map((p) => p.hooks ?? {}),
+  );
 
   return {
     async run(userInput, sessionId) {
@@ -76,6 +76,7 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
         userInput,
         classification,
         packs: options.packs,
+        hooks: orchestratorHooks,
       });
 
       sessions.touch(session.id);

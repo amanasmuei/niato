@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   createNawaitu,
   genericPack,
+  mergeHooks,
   mergePackAgents,
   stubClassifier,
   type Config,
+  type Hooks,
 } from "../src/index.js";
 import { loadConfig } from "../src/core/config.js";
+
+const noopHook = () => Promise.resolve({ continue: true as const });
 
 const fakeConfig: Config = {
   ANTHROPIC_API_KEY: "test-key-not-real",
@@ -103,6 +107,48 @@ describe("genericPack.route", () => {
         confidence: 1,
       }),
     ).toBeNull();
+  });
+});
+
+describe("mergeHooks", () => {
+  it("returns an empty Hooks when no layers are passed", () => {
+    expect(mergeHooks()).toEqual({});
+  });
+
+  it("preserves a single layer's matchers", () => {
+    const layer: Hooks = {
+      PreToolUse: [{ hooks: [noopHook] }],
+    };
+    const merged = mergeHooks(layer);
+    expect(merged.PreToolUse).toHaveLength(1);
+  });
+
+  it("concatenates matchers across layers in argument order", () => {
+    const a: Hooks = { PreToolUse: [{ matcher: "from-a", hooks: [noopHook] }] };
+    const b: Hooks = { PreToolUse: [{ matcher: "from-b", hooks: [noopHook] }] };
+    const c: Hooks = { PreToolUse: [{ matcher: "from-c", hooks: [noopHook] }] };
+    const merged = mergeHooks(a, b, c);
+    expect(merged.PreToolUse?.map((m) => m.matcher)).toEqual([
+      "from-a",
+      "from-b",
+      "from-c",
+    ]);
+  });
+
+  it("merges different events independently", () => {
+    const a: Hooks = { PreToolUse: [{ hooks: [noopHook] }] };
+    const b: Hooks = { PostToolUse: [{ hooks: [noopHook] }] };
+    const merged = mergeHooks(a, b);
+    expect(merged.PreToolUse).toHaveLength(1);
+    expect(merged.PostToolUse).toHaveLength(1);
+  });
+
+  it("does not mutate the input layers", () => {
+    const a: Hooks = { PreToolUse: [{ matcher: "from-a", hooks: [noopHook] }] };
+    const b: Hooks = { PreToolUse: [{ matcher: "from-b", hooks: [noopHook] }] };
+    mergeHooks(a, b);
+    expect(a.PreToolUse).toHaveLength(1);
+    expect(b.PreToolUse).toHaveLength(1);
   });
 });
 
