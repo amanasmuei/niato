@@ -135,6 +135,50 @@ describe("createHaikuClassifier", () => {
     await expect(classifier.classify("anything")).rejects.toThrow();
   });
 
+  it("propagates a multi-domain `secondary` field through the schema", async () => {
+    mockParse.mockResolvedValue({
+      parsed_output: {
+        intent: "fix_bug",
+        domain: "dev_tools",
+        confidence: 0.93,
+        secondary: [
+          { intent: "complaint", domain: "support", confidence: 0.88 },
+        ],
+      },
+    });
+
+    const classifier = createHaikuClassifier({
+      packs: [genericPack],
+      apiKey: "test-key",
+    });
+    const result = await classifier.classify(
+      "the refund webhook is broken — find the bug and open a ticket",
+    );
+
+    expect(result.intent).toBe("fix_bug");
+    expect(result.domain).toBe("dev_tools");
+    expect(result.secondary).toEqual([
+      { intent: "complaint", domain: "support", confidence: 0.88 },
+    ]);
+  });
+
+  it("validates secondary entries against the schema (rejects invalid confidence)", async () => {
+    mockParse.mockResolvedValue({
+      parsed_output: {
+        intent: "fix_bug",
+        domain: "dev_tools",
+        confidence: 0.9,
+        secondary: [{ intent: "complaint", domain: "support", confidence: 2 }],
+      },
+    });
+
+    const classifier = createHaikuClassifier({
+      packs: [genericPack],
+      apiKey: "test-key",
+    });
+    await expect(classifier.classify("anything")).rejects.toThrow();
+  });
+
   it("uses a custom model when provided", async () => {
     mockParse.mockResolvedValue({
       parsed_output: {
