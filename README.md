@@ -212,7 +212,7 @@ Every meaningful action is preceded by a stated intent:
 
 1. **Input validators** run synchronously over the raw message (`maxLength` on by default, `promptInjection` opt-in). First failure throws `NawaituInputRejectedError` before any tokens are spent.
 2. **Cost-limit gate** checks `session.cumulativeCostUsd ≥ costLimitUsd`. Pre-turn — never mid-turn.
-3. **Classifier** (Haiku 4.5) returns `{ intent, domain, confidence }` against the loaded packs' vocabulary, with the system prompt cached for warm reuse.
+3. **Classifier** (Sonnet 4.6 via the Agent SDK) returns `{ intent, domain, confidence }` against the loaded packs' vocabulary. Same SDK as the orchestrator, so OAuth subscription auth Just Works.
 4. **Orchestrator** (Opus 4.7) reads the classification, picks the pack from `domain`, calls `pack.route(intent)` to pick the specialist, and dispatches via the SDK's `Agent` tool.
 5. **Specialist** (Sonnet 4.6) does the work using its declared tool allowlist. Pack hooks gate tool calls before they execute.
 6. **Tracing** rebuilds a `TurnRecord` from the SDK's message stream and updates the session ledger.
@@ -263,14 +263,25 @@ Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus cross-turn a
 
 ## Auth modes
 
-Two paths into the Anthropic API; pick whichever matches your setup. Either is fine — the orchestrator and classifier both run through the Agent SDK, which auto-resolves auth.
+Two paths into the Anthropic API; pick whichever matches your setup. Both flow through the Agent SDK's auto-resolution — same code path on both sides.
 
 | Mode | Setup | Per-turn cost | When to use |
 | ---- | ----- | ------------- | ----------- |
-| **API key** | Set `ANTHROPIC_API_KEY` in `.env` | ~$0.15/turn against your API budget | Production deployments, CI, anywhere a developer API key is the right call |
-| **Claude Max subscription** | `claude /login` in Claude Code; leave `ANTHROPIC_API_KEY` unset | $0 — runs against your Max quota | Personal use, you already pay for Max, want to avoid double-billing |
+| **API key** | Set `ANTHROPIC_API_KEY` in `.env` | ~$0.15/turn against your API budget | Production deployments, CI, multi-user, anywhere a developer API key is the right call |
+| **Claude Max subscription** | `claude /login` in Claude Code; leave `ANTHROPIC_API_KEY` unset | $0 — runs against your Max quota | Personal, single-user, on your own machine |
 
 `createNawaitu()` logs the chosen path at startup (`auth mode: api_key` or `auth mode: oauth_subscription`). If both are configured, the env var wins.
+
+### Note on subscription auth
+
+The Agent SDK explicitly supports OAuth (subscription) authentication — that path is documented in the SDK's type definitions (`ApiKeySource = 'oauth'`). What's *not* explicit is whether Anthropic's Consumer Terms / Acceptable Use Policy permit using your Claude Max subscription to power applications other than Claude Code itself.
+
+The shape of the question:
+
+- **Probably fine**: personal use, low volume, on your own machine. You're already paying for Max; running a personal companion through it is close to the spirit of subscription auth.
+- **Verify before doing**: anything you'd put in front of customers, deploy to production, distribute to other users, or run at sustained volume. The right path for those cases is a developer API key with explicit billing.
+
+I can't give you a definitive answer on which side of the line a given use case falls. The authoritative sources are Anthropic's [Consumer Terms](https://www.anthropic.com/legal/consumer-terms), [Acceptable Use Policy](https://www.anthropic.com/legal/aup), Claude Max subscription agreement, and — for anything ambiguous — Anthropic support directly. Verify before scaling beyond personal use.
 
 ## Observability
 
