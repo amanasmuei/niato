@@ -23,7 +23,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "eval": "echo 'eval suite not implemented in Phase 1' && exit 1"
+    "eval": "tsx src/evals/runner.ts"
   },
   "engines": {
     "node": ">=20"

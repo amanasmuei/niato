@@ -1,0 +1,20 @@
+{"input": "What is 2 + 2?", "expected": {"domain": "generic", "intent": "question"}, "notes": "trivial arithmetic question"}
+{"input": "Explain how DNS works in three sentences.", "expected": {"domain": "generic", "intent": "question"}, "notes": "explanation request"}
+{"input": "What's the capital of France?", "expected": {"domain": "generic", "intent": "question"}, "notes": "factual question"}
+{"input": "How do React hooks work under the hood?", "expected": {"domain": "generic", "intent": "question"}, "notes": "technical explanation"}
+{"input": "Why is the sky blue?", "expected": {"domain": "generic", "intent": "question"}, "notes": "physics question"}
+{"input": "What does 'idempotent' mean in the context of HTTP methods?", "expected": {"domain": "generic", "intent": "question"}, "notes": "definition request"}
+{"input": "Can you summarize the key ideas in the SOLID principles?", "expected": {"domain": "generic", "intent": "question"}, "notes": "summary request — read-only"}
+{"input": "Walk me through how OAuth 2.0 authorization code flow works.", "expected": {"domain": "generic", "intent": "question"}, "notes": "explainer; 'walk me through' may sound action-y but intent is to learn"}
+{"input": "Create a file called notes.md with the heading 'Daily Standup'.", "expected": {"domain": "generic", "intent": "task"}, "notes": "concrete file creation"}
+{"input": "Rewrite this paragraph to be more concise: 'In my opinion it would seem to be the case that...'", "expected": {"domain": "generic", "intent": "task"}, "notes": "transformation"}
+{"input": "Replace every occurrence of 'foo' with 'bar' in main.py.", "expected": {"domain": "generic", "intent": "task"}, "notes": "edit operation"}
+{"input": "Initialize a new git repository in this directory and make an initial commit.", "expected": {"domain": "generic", "intent": "task"}, "notes": "shell action"}
+{"input": "Write a Python script that prints all prime numbers up to 100.", "expected": {"domain": "generic", "intent": "task"}, "notes": "code generation"}
+{"input": "Run the test suite and tell me which tests are failing.", "expected": {"domain": "generic", "intent": "task"}, "notes": "command execution + summary"}
+{"input": "I want to talk to a human, please.", "expected": {"domain": "generic", "intent": "escalate"}, "notes": "explicit escalation"}
+{"input": "Can you connect me with support? This is getting nowhere.", "expected": {"domain": "generic", "intent": "escalate"}, "notes": "frustrated escalation"}
+{"input": "Stop — I need an actual person to help me with this.", "expected": {"domain": "generic", "intent": "escalate"}, "notes": "directive escalation"}
+{"input": "Look at the code and fix whatever's wrong with it.", "expected": {"domain": "generic", "intent": "task"}, "notes": "boundary: vague but action-oriented; expect lower confidence"}
+{"input": "Hey, are you there?", "expected": {"domain": "generic", "intent": "question"}, "notes": "boundary: greeting/ping; classifier should pick the closest intent (question), confidence will be low"}
+{"input": "I'd like to understand how to implement rate limiting in my API.", "expected": {"domain": "generic", "intent": "question"}, "notes": "boundary: 'implement' sounds task-y but the user is asking for explanation"}
