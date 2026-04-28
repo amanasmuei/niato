@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { Box, render, Text, useApp } from "ink";
 import { PhaseLine } from "./cli/tui/components/phase-line.js";
+import { TokenPanel } from "./cli/tui/components/token-panel.js";
 import { createNawaitu } from "./core/compose.js";
 import { type DomainPack } from "./packs/DomainPack.js";
 import { genericPack } from "./packs/generic/index.js";
@@ -178,32 +179,6 @@ function App({
       )}
     </Box>
   );
-}
-
-function TokenPanel({ trace }: { trace: TurnRecord }): ReactElement {
-  const rows = Object.entries(trace.tokensByModel);
-  return (
-    <Box flexDirection="column" marginTop={1}>
-      <Text color="gray">Tokens</Text>
-      {rows.map(([model, usage]) => (
-        <Box key={model}>
-          <Box width={32}>
-            <Text>{shortenModel(model)}</Text>
-          </Box>
-          <Text color="gray">
-            {`${String(usage.inputTokens)} in · ${String(usage.outputTokens)} out · ${String(usage.cacheReadInputTokens)} cache-read · ${String(usage.cacheCreationInputTokens)} cache-create`}
-          </Text>
-        </Box>
-      ))}
-      <Box marginTop={1}>
-        <Text color="gray">{`Cost $${trace.costUsd.toFixed(4)} · Latency ${(trace.latencyMs / 1000).toFixed(1)}s · Outcome ${trace.outcome}`}</Text>
-      </Box>
-    </Box>
-  );
-}
-
-function shortenModel(model: string): string {
-  return model.replace(/^claude-/, "").replace(/-\d{8}$/, "");
 }
 
 function formatClassification(c: IntentResult): string {
