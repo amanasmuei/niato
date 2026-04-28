@@ -7,6 +7,7 @@ import {
   SUPPORT_STUB_SERVER_NAME,
   supportStubServer,
 } from "./tools/support_stub.js";
+import { supportHooks } from "./hooks/index.js";
 
 const intents: IntentDefinition[] = [
   {
@@ -44,5 +45,6 @@ export const supportPack: DomainPack = {
   mcpServers: {
     [SUPPORT_STUB_SERVER_NAME]: supportStubServer,
   },
+  hooks: supportHooks,
   route: (intent) => intentToSpecialist[intent.intent] ?? null,
 };
