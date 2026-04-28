@@ -15,13 +15,21 @@ const fakeConfig: Config = {
 
 describe("createNawaitu", () => {
   it("exposes run()", () => {
-    const nawaitu = createNawaitu({ packs: [genericPack], config: fakeConfig });
+    const nawaitu = createNawaitu({
+      packs: [genericPack],
+      classifier: stubClassifier,
+      config: fakeConfig,
+    });
     expect(typeof nawaitu.run).toBe("function");
   });
 
   it("rejects an empty pack list", () => {
     expect(() =>
-      createNawaitu({ packs: [], config: fakeConfig }),
+      createNawaitu({
+        packs: [],
+        classifier: stubClassifier,
+        config: fakeConfig,
+      }),
     ).toThrow(/at least one DomainPack/);
   });
 });

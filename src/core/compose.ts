@@ -1,7 +1,7 @@
 import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { type DomainPack } from "../packs/DomainPack.js";
 import { type Classifier, type IntentResult } from "./classifier/types.js";
-import { stubClassifier } from "./classifier/stub.js";
+import { createHaikuClassifier } from "./classifier/haiku.js";
 import { runOrchestrator } from "./orchestrator/orchestrator.js";
 import { type Hooks } from "../guardrails/hooks.js";
 import {
@@ -36,7 +36,12 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
   const config = options.config ?? loadConfig();
   const logger =
     options.logger ?? createConsoleLogger(config.NAWAITU_LOG_LEVEL);
-  const classifier = options.classifier ?? stubClassifier;
+  const classifier =
+    options.classifier ??
+    createHaikuClassifier({
+      packs: options.packs,
+      apiKey: config.ANTHROPIC_API_KEY,
+    });
   const sessions = new InMemorySessionStore();
 
   if (options.packs.length === 0) {
