@@ -120,4 +120,14 @@ describe("nawaitu.metrics()", () => {
     });
     expect(nawaitu.metrics("never-existed")).toBeUndefined();
   });
+
+  it("returns a structuredClone — caller mutations do not corrupt the live ledger", () => {
+    // Lock the advisor-flagged immutability contract: telemetry callers
+    // sometimes "reset" a counter on the returned object as a way to take
+    // a delta snapshot. That must not corrupt the session's running state.
+    const m1 = emptySessionMetrics();
+    const m2 = structuredClone(m1);
+    m2.guardrailsTriggered["Bash"] = 99;
+    expect(m1.guardrailsTriggered).toEqual({});
+  });
 });

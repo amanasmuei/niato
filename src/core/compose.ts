@@ -164,7 +164,12 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
       };
     },
     metrics(sessionId) {
-      return sessions.get(sessionId)?.metrics;
+      const m = sessions.get(sessionId)?.metrics;
+      // structuredClone defends against callers mutating the live ledger
+      // (e.g. `nawaitu.metrics(id).guardrailsTriggered["Bash"] = 0` to
+      // "reset" a dashboard view would silently corrupt the session's
+      // running state). Telemetry callers do this kind of thing.
+      return m === undefined ? undefined : structuredClone(m);
     },
   };
 }
