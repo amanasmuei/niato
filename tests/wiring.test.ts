@@ -13,6 +13,11 @@ import {
 } from "../src/index.js";
 import { loadConfig } from "../src/core/config.js";
 import { ensureBudget } from "../src/core/compose.js";
+import {
+  mergePackMcpServers,
+  unionAllowedTools,
+} from "../src/core/orchestrator/orchestrator.js";
+import { SUPPORT_STUB_SERVER_NAME } from "../src/packs/support/tools/support_stub.js";
 
 const noopHook = () => Promise.resolve({ continue: true as const });
 
@@ -101,6 +106,46 @@ describe("stubClassifier", () => {
       domain: "generic",
       confidence: 0.95,
     });
+  });
+});
+
+describe("mergePackMcpServers", () => {
+  it("returns an empty map when no pack contributes servers", () => {
+    expect(mergePackMcpServers([genericPack])).toEqual({});
+  });
+
+  it("includes the support_stub server when supportPack is loaded", () => {
+    const merged = mergePackMcpServers([supportPack]);
+    expect(Object.keys(merged)).toEqual([SUPPORT_STUB_SERVER_NAME]);
+  });
+
+  it("preserves servers across multi-pack composition", () => {
+    const merged = mergePackMcpServers([genericPack, supportPack]);
+    expect(Object.keys(merged)).toEqual([SUPPORT_STUB_SERVER_NAME]);
+  });
+});
+
+describe("unionAllowedTools", () => {
+  it("always includes the Agent tool", () => {
+    expect(unionAllowedTools([genericPack])).toContain("Agent");
+  });
+
+  it("collects each specialist's declared tools", () => {
+    const tools = unionAllowedTools([genericPack]);
+    // Generic.retrieval pulls in read-only tools; Generic.action pulls in
+    // write tools. The union is what the orchestrator's allowedTools sees.
+    expect(tools).toEqual(
+      expect.arrayContaining(["Read", "Write", "Edit", "Bash", "WebSearch"]),
+    );
+  });
+
+  it("accepts MCP-prefixed tool names from a Phase 4 pack (no real names yet — wiring lands in Step 3)", () => {
+    // Step 2 just registers the MCP server; specialist `tools` arrays are
+    // still empty until Step 3. This test pins the union shape so Step 3's
+    // change is visible: adding a single mcp__support_stub__lookup_ticket
+    // entry will show up in this assertion.
+    const tools = unionAllowedTools([supportPack]);
+    expect(tools).toEqual(["Agent"]);
   });
 });
 

@@ -1,6 +1,7 @@
 import {
   query,
   type AgentDefinition,
+  type McpServerConfig,
   type Options,
   type SDKMessage,
 } from "@anthropic-ai/claude-agent-sdk";
@@ -40,7 +41,7 @@ export function mergePackAgents(
   return merged;
 }
 
-function unionAllowedTools(packs: DomainPack[]): string[] {
+export function unionAllowedTools(packs: DomainPack[]): string[] {
   const tools = new Set<string>([BuiltinTools.Agent]);
   for (const pack of packs) {
     for (const def of Object.values(pack.agents)) {
@@ -50,6 +51,23 @@ function unionAllowedTools(packs: DomainPack[]): string[] {
     }
   }
   return [...tools];
+}
+
+// Flatten each pack's contributed MCP servers into a single map keyed by
+// server name. Pack-name collisions are caller-visible: the second pack
+// wins, which surfaces as a duplicate-name eslint/test failure rather
+// than silent override. Phase 4 ships one server (support_stub); this
+// shape is what the SDK accepts as Options.mcpServers.
+export function mergePackMcpServers(
+  packs: DomainPack[],
+): Record<string, McpServerConfig> {
+  const merged: Record<string, McpServerConfig> = {};
+  for (const pack of packs) {
+    for (const [name, config] of Object.entries(pack.mcpServers ?? {})) {
+      merged[name] = config;
+    }
+  }
+  return merged;
 }
 
 function buildUserMessage(input: OrchestratorInput): string {
@@ -84,6 +102,7 @@ const builtInHooks: Hooks = {
 export async function runOrchestrator(
   input: OrchestratorInput,
 ): Promise<OrchestratorOutput> {
+  const mcpServers = mergePackMcpServers(input.packs);
   const options: Options = {
     model: ORCHESTRATOR_MODEL,
     systemPrompt: ORCHESTRATOR_PROMPT,
@@ -92,6 +111,7 @@ export async function runOrchestrator(
     settingSources: [],
     permissionMode: "default",
     hooks: mergeHooks(builtInHooks, input.hooks ?? {}),
+    ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
   };
 
   const messages: SDKMessage[] = [];

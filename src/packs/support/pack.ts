@@ -3,6 +3,10 @@ import { ticketLookupAgent } from "./agents/ticket_lookup.js";
 import { refundProcessorAgent } from "./agents/refund_processor.js";
 import { kbSearchAgent } from "./agents/kb_search.js";
 import { escalateAgent } from "./agents/escalate.js";
+import {
+  SUPPORT_STUB_SERVER_NAME,
+  supportStubServer,
+} from "./tools/support_stub.js";
 
 const intents: IntentDefinition[] = [
   {
@@ -36,6 +40,9 @@ export const supportPack: DomainPack = {
     refund_processor: refundProcessorAgent,
     kb_search: kbSearchAgent,
     escalate: escalateAgent,
+  },
+  mcpServers: {
+    [SUPPORT_STUB_SERVER_NAME]: supportStubServer,
   },
   route: (intent) => intentToSpecialist[intent.intent] ?? null,
 };
