@@ -13,7 +13,7 @@ set -e
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 if [ $# -eq 0 ]; then
-  set -- chat
+  set -- tui
 fi
 
 exec pnpm --silent --dir "$DIR" "$@"

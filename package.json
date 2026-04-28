@@ -24,6 +24,7 @@
     "dev": "tsx --env-file=.env src/cli.ts",
     "dev:multi": "tsx --env-file=.env src/cli-multi.ts",
     "dev:tui": "tsx --env-file=.env src/cli-tui.tsx",
+    "tui": "tsx --env-file=.env src/cli/tui/index.tsx",
     "chat": "tsx --env-file=.env src/cli-chat.ts",
     "login": "tsx src/cli-login.ts",
     "build": "tsc -p tsconfig.build.json",
