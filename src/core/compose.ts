@@ -91,7 +91,8 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
   // Phase 9: log which auth mode the SDK will use so the path is never
   // ambiguous. Both modes go through the Agent SDK's auto-resolution;
   // this is purely an operational signal for the user.
-  logger.log("info", "auth mode", { mode: resolveAuthMode(config) });
+  const authMode = resolveAuthMode(config);
+  logger.log("info", "auth mode", { mode: authMode });
   const classifier =
     options.classifier ??
     createSonnetClassifier({

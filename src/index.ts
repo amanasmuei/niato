@@ -29,6 +29,7 @@ export {
   NawaituInputRejectedError,
   NawaituBudgetExceededError,
 } from "./guardrails/errors.js";
+export { NawaituAuthError } from "./core/errors.js";
 export type { Logger, LogLevel } from "./observability/log.js";
 export type {
   TurnRecord,

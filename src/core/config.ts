@@ -7,6 +7,7 @@ import { NawaituAuthError } from "./errors.js";
 // at startup so the chosen path is logged unambiguously.
 const EnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  NAWAITU_AUTH: z.literal("subscription").optional(),
   NAWAITU_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });
 
@@ -35,17 +36,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 // Subscription opt-in wins when both are set: explicit intent beats default.
 // When neither is set, we throw rather than silently landing on OAuth — that
 // would push strangers onto the ToS-uncertain path without their knowledge.
-export function resolveAuthMode(
-  config: Config,
-  env: NodeJS.ProcessEnv = process.env,
-): AuthMode {
-  if (env["NAWAITU_AUTH"] === "subscription") return "oauth_subscription";
+export function resolveAuthMode(config: Config): AuthMode {
+  if (config.NAWAITU_AUTH === "subscription") return "oauth_subscription";
   if (config.ANTHROPIC_API_KEY !== undefined) return "api_key";
   throw new NawaituAuthError(
     "No authentication configured.\n\n" +
       "Pick one:\n" +
-      "  • Set ANTHROPIC_API_KEY (developer API path, per-token billing).\n" +
-      "  • Set NAWAITU_AUTH=subscription to use Claude subscription auth\n" +
+      "  * Set ANTHROPIC_API_KEY (developer API path, per-token billing).\n" +
+      "  * Set NAWAITU_AUTH=subscription to use Claude subscription auth\n" +
       "    (review ToS notes in README before non-personal use).\n",
   );
 }

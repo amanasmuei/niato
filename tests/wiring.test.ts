@@ -12,6 +12,7 @@ import {
   type Hooks,
   type SessionContext,
 } from "../src/index.js";
+import { NawaituAuthError } from "../src/core/errors.js";
 import { loadConfig, resolveAuthMode } from "../src/core/config.js";
 import { ensureBudget } from "../src/core/compose.js";
 import { emptySessionMetrics } from "../src/observability/metrics.js";
@@ -405,16 +406,25 @@ describe("loadConfig", () => {
   it("rejects an empty-string ANTHROPIC_API_KEY", () => {
     expect(() => loadConfig({ ANTHROPIC_API_KEY: "" })).toThrow();
   });
+
+  it("accepts NAWAITU_AUTH=subscription", () => {
+    const cfg = loadConfig({ NAWAITU_AUTH: "subscription" });
+    expect(cfg.NAWAITU_AUTH).toBe("subscription");
+  });
+
+  it("rejects unknown NAWAITU_AUTH values", () => {
+    expect(() => loadConfig({ NAWAITU_AUTH: "garbage" })).toThrow();
+  });
 });
 
 describe("resolveAuthMode", () => {
   it("returns 'api_key' when ANTHROPIC_API_KEY is set", () => {
     expect(
-      resolveAuthMode(loadConfig({ ANTHROPIC_API_KEY: "sk-test" }), {}),
+      resolveAuthMode(loadConfig({ ANTHROPIC_API_KEY: "sk-test" })),
     ).toBe("api_key");
   });
 
   it("throws NawaituAuthError when neither auth path is configured", () => {
-    expect(() => resolveAuthMode(loadConfig({}), {})).toThrow();
+    expect(() => resolveAuthMode(loadConfig({}))).toThrow(NawaituAuthError);
   });
 });
