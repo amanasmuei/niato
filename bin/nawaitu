@@ -1,19 +1,44 @@
-#!/usr/bin/env sh
-# Nawaitu CLI dispatcher.
-#
-# Routes subcommands through pnpm to the matching script in package.json.
-# Defaults to `tui` when invoked with no args. Forwards any extra args
-# through, so `nawaitu chat --reset` becomes `pnpm chat --reset`.
-#
-# Setup (one-time): `pnpm link` from the repo root, then `nawaitu login`
-# and `nawaitu` (launches TUI) are available globally.
+#!/usr/bin/env node
+// Nawaitu CLI dispatcher (Node-based, no pnpm dependency).
+// Routes subcommands to compiled entries under dist/. See
+// src/cli/dispatch.ts for the pure routing logic.
 
-set -e
+import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { resolveDispatch, helpText } from "../dist/cli/dispatch.js";
 
-DIR="$(cd "$(dirname "$0")/.." && pwd)"
+const here = dirname(fileURLToPath(import.meta.url));
+const pkgRoot = join(here, "..");
+const distRoot = join(pkgRoot, "dist");
 
-if [ $# -eq 0 ]; then
-  set -- tui
-fi
+const args = process.argv.slice(2);
+const result = resolveDispatch(args);
 
-exec pnpm --silent --dir "$DIR" "$@"
+if (result.kind === "version") {
+  const pkg = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "utf8"));
+  process.stdout.write(`${pkg.version}\n`);
+  process.exit(0);
+}
+
+if (result.kind === "help") {
+  process.stdout.write(`${helpText()}\n`);
+  process.exit(0);
+}
+
+if (result.kind === "unknown") {
+  process.stderr.write(`nawaitu: unknown subcommand '${result.subcommand}'\n`);
+  process.stderr.write("Run `nawaitu --help` for usage.\n");
+  process.exit(2);
+}
+
+const child = spawn(
+  process.execPath,
+  [join(distRoot, result.entry), ...result.forwardArgs],
+  { stdio: "inherit" },
+);
+child.on("exit", (code, signal) => {
+  if (signal !== null) process.kill(process.pid, signal);
+  else process.exit(code ?? 1);
+});
