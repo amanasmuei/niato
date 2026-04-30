@@ -3,6 +3,7 @@ import { type Nawaitu, type NawaituTurn } from "../../../core/compose.js";
 import { type IntentResult } from "../../../core/classifier/types.js";
 import { type TurnRecord } from "../../../observability/trace.js";
 import { type Logger } from "../../../observability/log.js";
+import { classifyError } from "../../error-classify.js";
 
 export type SessionPhase =
   | "idle"
@@ -116,7 +117,13 @@ export function useNawaituSession(
         setTurns((t) => [...t.slice(0, -1), next]);
         onTurnComplete?.(next);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const classified = classifyError(err);
+        const msg =
+          classified !== null
+            ? classified.message
+            : err instanceof Error
+              ? err.message
+              : String(err);
         const errorTurn: TurnState = {
           input,
           output: undefined,
