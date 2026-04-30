@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveDispatch } from "../src/cli/dispatch.js";
+import { resolveDispatch, helpText } from "../src/cli/dispatch.js";
 
 describe("resolveDispatch", () => {
   it("defaults to tui entry when no subcommand is given", () => {
@@ -32,19 +32,35 @@ describe("resolveDispatch", () => {
     if (result.kind === "entry") expect(result.entry).toBe("cli-login.js");
   });
 
-  it("returns kind=version for --version", () => {
-    expect(resolveDispatch(["--version"]).kind).toBe("version");
-    expect(resolveDispatch(["-v"]).kind).toBe("version");
-  });
+  it.each([["--version"], ["-v"]])(
+    "returns kind=version for %s",
+    (flag) => {
+      expect(resolveDispatch([flag]).kind).toBe("version");
+    },
+  );
 
-  it("returns kind=help for --help", () => {
-    expect(resolveDispatch(["--help"]).kind).toBe("help");
-    expect(resolveDispatch(["-h"]).kind).toBe("help");
-  });
+  it.each([["--help"], ["-h"]])(
+    "returns kind=help for %s",
+    (flag) => {
+      expect(resolveDispatch([flag]).kind).toBe("help");
+    },
+  );
 
   it("returns kind=unknown with the bad subcommand for anything else", () => {
     const result = resolveDispatch(["bogus"]);
     expect(result.kind).toBe("unknown");
     if (result.kind === "unknown") expect(result.subcommand).toBe("bogus");
+  });
+});
+
+describe("helpText", () => {
+  it("includes the program name and core subcommands", () => {
+    const text = helpText();
+    expect(text).toMatch(/^nawaitu —/);
+    expect(text).toContain("nawaitu tui");
+    expect(text).toContain("nawaitu chat");
+    expect(text).toContain("nawaitu login");
+    expect(text).toContain("ANTHROPIC_API_KEY");
+    expect(text).toContain("NAWAITU_AUTH=subscription");
   });
 });

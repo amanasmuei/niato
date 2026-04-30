@@ -42,3 +42,7 @@ child.on("exit", (code, signal) => {
   if (signal !== null) process.kill(process.pid, signal);
   else process.exit(code ?? 1);
 });
+child.on("error", (err) => {
+  process.stderr.write(`nawaitu: failed to launch entry: ${err.message}\n`);
+  process.exit(1);
+});

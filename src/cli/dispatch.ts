@@ -8,28 +8,24 @@ export type DispatchResult =
   | { kind: "help" }
   | { kind: "unknown"; subcommand: string };
 
-const ENTRIES: Record<string, string> = {
+const ENTRIES = {
   tui: "cli/tui/index.js",
   chat: "cli-chat.js",
   login: "cli-login.js",
-};
+} as const;
 
 export function resolveDispatch(args: readonly string[]): DispatchResult {
   const first = args[0];
   if (first === undefined) {
-    // Default subcommand is 'tui'. Cast: ENTRIES["tui"] is statically present
-    // in the const map above; the lookup is exhaustive at config time.
-    const tuiEntry = ENTRIES["tui"];
-    if (tuiEntry === undefined) {
-      throw new Error("dispatch: tui entry missing from ENTRIES");
-    }
-    return { kind: "entry", entry: tuiEntry, forwardArgs: [] };
+    return { kind: "entry", entry: ENTRIES.tui, forwardArgs: [] };
   }
   if (first === "--version" || first === "-v") return { kind: "version" };
   if (first === "--help" || first === "-h") return { kind: "help" };
 
-  const entry = ENTRIES[first];
-  if (entry !== undefined) {
+  if (first in ENTRIES) {
+    // `in` narrows the object, not the string; the cast safely propagates
+    // that narrowing into the lookup.
+    const entry = ENTRIES[first as keyof typeof ENTRIES];
     return { kind: "entry", entry, forwardArgs: args.slice(1) };
   }
   return { kind: "unknown", subcommand: first };
