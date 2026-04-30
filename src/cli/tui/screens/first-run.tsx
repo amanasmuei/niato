@@ -27,7 +27,7 @@ export function FirstRun({
     {
       id: "api-key",
       label: "API key",
-      detail: "use ANTHROPIC_API_KEY or prompt",
+      detail: "paste in next step (or set ANTHROPIC_API_KEY in shell)",
     },
   ];
 
