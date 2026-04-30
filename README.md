@@ -75,10 +75,13 @@ nawaitu login    # OAuth subscription auth (wraps `claude /login`)
 nawaitu chat     # legacy multi-turn REPL (kept for backwards compat)
 ```
 
-**First run** walks you through:
+**First run** walks you through (all in-app, no shell setup needed):
 
-1. Auth pick — Claude subscription (recommended) or API key.
-2. Companion setup — name, voice, optional preferences (saved to `~/.nawaitu/companion.json`).
+1. Auth pick — Claude subscription or API key.
+2. If API key: paste it in the in-app prompt (saved to `~/.nawaitu/auth.json`, chmod 600). The shell shortcut `ANTHROPIC_API_KEY` still works for power users.
+3. Companion setup — name, voice archetype, optional preferences (saved to `~/.nawaitu/companion.json`).
+
+The `pnpm chat` standalone REPL stays for legacy/dev use, but isn't required for first-run anymore.
 
 **The TUI gives you:**
 
@@ -418,6 +421,7 @@ The check is strict: any drop in `passed` count fails. Case-count changes (i.e. 
 | 8 | Cleanup: consolidated session aggregates into `metrics` (dropped duplicate `cumulativeCostUsd` / `turnCount` fields). Level 1 persona: configurable user-facing identity prepended to the orchestrator's system prompt. |
 | 9 | OAuth subscription auth: classifier migrated from raw `@anthropic-ai/sdk` (API-key-only, Haiku) to `@anthropic-ai/claude-agent-sdk` (OAuth-capable, Sonnet 4.6). `ANTHROPIC_API_KEY` now optional; both paths flow through the SDK's auto-resolution. `pnpm chat` first-run wizard + persistent companion config at `~/.nawaitu/companion.json`. |
 | 10 | Release prep (v0.2.0): MIT license, NAWAITU_AUTH=subscription opt-in gate (closes ToS-uncertain default), package.json npm-publishable shape, Node-based bin dispatcher, README rewrite, ARCHITECTURE.md status fix. |
+| 11 | In-app onboarding (v0.3.0): ApiKeyEntry + CompanionWizard Ink screens replace v0.2's `pnpm chat` hand-off. Install-to-first-turn fully self-contained in the TUI. |
 
 Up next:
 
