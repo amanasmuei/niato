@@ -4,7 +4,7 @@
 >
 > A production-grade intent-routing agent built on the **Claude Agent SDK**, in **TypeScript**, designed around a **shared core + pluggable Domain Packs**. The system declares what it's about to do, then does it — the same pattern enforced at every layer: classify, plan, approve, act.
 
-**Status.** Architecture only. No code yet. Implementation phases sketched in §15.
+**Status.** Phases 1–10 shipped (see [README roadmap](./README.md#roadmap)). The architecture below remains the source of truth for design decisions; the README is the source of truth for shipped behavior. When the two disagree, the README wins until this doc catches up.
 
 ---
 
