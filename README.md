@@ -323,7 +323,7 @@ Two paths into the Anthropic API; pick whichever matches your setup. Both flow t
 | **Subscription** (opt-in) | `NAWAITU_AUTH=subscription` + prior `claude /login` | $0 — runs against Claude Max quota | Personal, single-user, on your own machine. **Read the ToS note below.** |
 | **None** | neither set | n/a | `NawaituAuthError` thrown at startup with actionable message |
 
-`createNawaitu()` logs the chosen path at startup (`auth mode: api_key` or `auth mode: oauth_subscription`). If both are configured, the env var wins.
+`createNawaitu()` logs the chosen path at startup (`auth mode: api_key` or `auth mode: oauth_subscription`). If both are configured, `NAWAITU_AUTH=subscription` wins — explicit subscription opt-in overrides the API key.
 
 ### Note on subscription auth
 

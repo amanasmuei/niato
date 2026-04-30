@@ -12,6 +12,7 @@ import { buildPersonaFromCompanion } from "../persona-builder.js";
 import { loadCompanion } from "../companion-config.js";
 import { type Logger } from "../../observability/log.js";
 import { applyPersistedAuthEnv } from "./auth-env.js";
+import { renderAuthError } from "../../cli-error-render.js";
 
 function readVersion(): string {
   try {
@@ -52,6 +53,12 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
+  const authMessage = renderAuthError(err);
+  if (authMessage !== null) {
+    process.stderr.write(`${authMessage}\n`);
+    process.exit(2);
+    return;
+  }
   const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
   console.error(message);
   process.exit(1);
