@@ -26,6 +26,15 @@ export interface OrchestratorInput {
   // Optional Level 1 persona. Prepended to the orchestrator's system
   // prompt as the user-facing identity layer. See src/core/persona.ts.
   persona?: Persona;
+  // Mutually exclusive: sessionId starts a new SDK session with the given
+  // UUID; resume loads a prior session's transcript. Pass exactly one
+  // (or neither for legacy single-shot behavior).
+  sessionId?: string;
+  resume?: string;
+  // Where the SDK persists session JSONL. Defaults to the SDK's own
+  // ~/.claude/projects/<cwd>/ heuristic; overriding here gives stable
+  // per-session storage independent of the user's shell cwd.
+  cwd?: string;
 }
 
 export interface OrchestratorOutput {
@@ -159,9 +168,12 @@ export function buildOrchestratorSystemPrompt(
   return `${buildPersonaPreamble(persona)}${ORCHESTRATOR_PROMPT}`;
 }
 
-export async function runOrchestrator(
-  input: OrchestratorInput,
-): Promise<OrchestratorOutput> {
+export function buildOrchestratorOptions(input: OrchestratorInput): Options {
+  if (input.sessionId !== undefined && input.resume !== undefined) {
+    throw new Error(
+      "buildOrchestratorOptions: sessionId and resume are mutually exclusive",
+    );
+  }
   const mcpServers = mergePackMcpServers(input.packs);
   const systemPrompt = buildOrchestratorSystemPrompt(input.persona);
   const options: Options = {
@@ -173,8 +185,17 @@ export async function runOrchestrator(
     permissionMode: "default",
     hooks: mergeHooks(builtInHooks, input.hooks ?? {}),
     ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
+    ...(input.sessionId !== undefined ? { sessionId: input.sessionId } : {}),
+    ...(input.resume !== undefined ? { resume: input.resume } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
   };
+  return options;
+}
 
+export async function runOrchestrator(
+  input: OrchestratorInput,
+): Promise<OrchestratorOutput> {
+  const options = buildOrchestratorOptions(input);
   const messages: SDKMessage[] = [];
   let finalResult = "";
 
