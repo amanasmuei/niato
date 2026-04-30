@@ -423,6 +423,7 @@ The check is strict: any drop in `passed` count fails. Case-count changes (i.e. 
 | 10 | Release prep (v0.2.0): MIT license, NAWAITU_AUTH=subscription opt-in gate (closes ToS-uncertain default), package.json npm-publishable shape, Node-based bin dispatcher, README rewrite, ARCHITECTURE.md status fix. |
 | 11 | In-app onboarding (v0.3.0): ApiKeyEntry + CompanionWizard Ink screens replace v0.2's `pnpm chat` hand-off. Install-to-first-turn fully self-contained in the TUI. |
 | 12 | Conversation memory (v0.4.0): SDK sessionId/resume threading via SessionContext.started flag. Cross-turn coherence works in `nawaitu.run()` and the TUI's Resume Last path; the SDK persists transcripts at `~/.nawaitu/sdk-sessions`. |
+| 13 | v1.0.0: error UX (network/401/429/malformed messages friendly), TUI default packs reduced to Generic-only with `NAWAITU_PACKS` opt-in for Support/Dev Tools, full CHANGELOG. Eval baselines and `pr_creator` deferred to v1.x backlog. |
 
 Up next:
 
