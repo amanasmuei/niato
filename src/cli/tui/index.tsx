@@ -11,6 +11,7 @@ import { devToolsPack } from "../../packs/dev-tools/index.js";
 import { buildPersonaFromCompanion } from "../persona-builder.js";
 import { loadCompanion } from "../companion-config.js";
 import { type Logger } from "../../observability/log.js";
+import { applyPersistedAuthEnv } from "./auth-env.js";
 
 function readVersion(): string {
   try {
@@ -31,6 +32,7 @@ function readVersion(): string {
 }
 
 async function main(): Promise<void> {
+  applyPersistedAuthEnv();
   const version = readVersion();
   const companion = loadCompanion();
 
