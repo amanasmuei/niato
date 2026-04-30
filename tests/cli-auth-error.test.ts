@@ -12,6 +12,7 @@ describe("renderAuthError", () => {
     expect(out).toContain("No authentication configured");
     expect(out).toContain("Pick one");
     expect(out).not.toContain("at "); // no stack trace
+    expect(out).toMatch(/^nawaitu: /);
   });
 
   it("returns null for non-auth errors", () => {

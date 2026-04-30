@@ -42,6 +42,7 @@ main().catch((err: unknown) => {
   if (authMessage !== null) {
     process.stderr.write(`${authMessage}\n`);
     process.exit(2);
+    return;
   }
   const msg = err instanceof Error ? err.stack ?? err.message : String(err);
   console.error(msg);
