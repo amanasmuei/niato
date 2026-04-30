@@ -21,22 +21,43 @@ The architecture is a series of declarations before actions: **classify, plan, g
 
 ## Quick start
 
-Requires Node 20.6+ and pnpm. **Authenticate via either of:**
-
-- **API key** — set `ANTHROPIC_API_KEY` (developer API billing, per-token).
-- **Claude Max subscription** — run `pnpm login` (a thin wrapper around `claude /login`); Nawaitu picks up the OAuth session automatically (no env var needed). Costs roll against your Max quota; per-turn API spend drops to zero. **Read the "Note on subscription auth" below before using this for anything beyond personal use.**
+Requires Node 20.6+. Install globally via npm:
 
 ```bash
-pnpm install
-cp .env.example .env       # only if using API-key path; fill in ANTHROPIC_API_KEY
-pnpm typecheck             # tsc --noEmit
-pnpm lint                  # eslint
-pnpm test                  # vitest (E2E suites skip when no auth is configured)
+npm i -g nawaitu
 ```
 
-The CLI auto-loads `.env` via Node's `--env-file` flag, so once your key is in place you can run a single turn directly:
+Or run without installing:
 
 ```bash
+npx nawaitu
+```
+
+**Authenticate.** Pick one and set it in your shell:
+
+```bash
+# Developer API path (recommended for v0.2 — clearest billing)
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# OR — Claude subscription path (review ToS notes below before non-personal use)
+export NAWAITU_AUTH=subscription   # then run: claude /login (one-time)
+```
+
+Then:
+
+```bash
+nawaitu          # launches the TUI
+nawaitu --help   # subcommands: tui, chat, login
+```
+
+**Develop locally** (clone-based — same as before):
+
+```bash
+git clone <your-fork>
+cd nawaitu
+pnpm install
+cp .env.example .env       # fill in ANTHROPIC_API_KEY
+pnpm typecheck && pnpm lint && pnpm test
 pnpm dev "explain how DNS works in three sentences"
 ```
 
@@ -296,23 +317,28 @@ Matches the per-turn record shape from `ARCHITECTURE.md` §11 minus cross-turn a
 
 Two paths into the Anthropic API; pick whichever matches your setup. Both flow through the Agent SDK's auto-resolution — same code path on both sides.
 
-| Mode | Setup | Per-turn cost | When to use |
-| ---- | ----- | ------------- | ----------- |
-| **API key** | Set `ANTHROPIC_API_KEY` in `.env` | ~$0.15/turn against your API budget | Production deployments, CI, multi-user, anywhere a developer API key is the right call |
-| **Claude Max subscription** | `pnpm login` (or `claude /login` directly); leave `ANTHROPIC_API_KEY` unset | $0 — runs against your Max quota | Personal, single-user, on your own machine |
+| Path | Trigger | Cost | Use case |
+| ---- | ------- | ---- | -------- |
+| **API key** (default) | `ANTHROPIC_API_KEY=sk-ant-...` | per-token against your API budget | Production, CI, multi-user, anywhere a developer API key is the right call |
+| **Subscription** (opt-in) | `NAWAITU_AUTH=subscription` + prior `claude /login` | $0 — runs against Claude Max quota | Personal, single-user, on your own machine. **Read the ToS note below.** |
+| **None** | neither set | n/a | `NawaituAuthError` thrown at startup with actionable message |
 
 `createNawaitu()` logs the chosen path at startup (`auth mode: api_key` or `auth mode: oauth_subscription`). If both are configured, the env var wins.
 
 ### Note on subscription auth
 
-The Agent SDK explicitly supports OAuth (subscription) authentication — that path is documented in the SDK's type definitions (`ApiKeySource = 'oauth'`). What's *not* explicit is whether Anthropic's Consumer Terms / Acceptable Use Policy permit using your Claude Max subscription to power applications other than Claude Code itself.
+The Agent SDK supports OAuth (subscription) authentication, and Nawaitu can use it via `NAWAITU_AUTH=subscription`. This path is **opt-in only as of v0.2.0**: without that env var, Nawaitu uses the developer API path or fails clearly at startup. We made this change because:
 
-The shape of the question:
+- The Agent SDK explicitly supports OAuth (`ApiKeySource = 'oauth'` in its types).
+- What's *not* explicit is whether Anthropic's Consumer Terms / Acceptable Use Policy permit using your Claude Max subscription to power applications other than Claude Code itself.
+- Silently defaulting strangers onto that path would push them onto a ToS-uncertain path without their knowledge.
+
+Shape of the question:
 
 - **Probably fine**: personal use, low volume, on your own machine. You're already paying for Max; running a personal companion through it is close to the spirit of subscription auth.
 - **Verify before doing**: anything you'd put in front of customers, deploy to production, distribute to other users, or run at sustained volume. The right path for those cases is a developer API key with explicit billing.
 
-I can't give you a definitive answer on which side of the line a given use case falls. The authoritative sources are Anthropic's [Consumer Terms](https://www.anthropic.com/legal/consumer-terms), [Acceptable Use Policy](https://www.anthropic.com/legal/aup), Claude Max subscription agreement, and — for anything ambiguous — Anthropic support directly. Verify before scaling beyond personal use.
+The authoritative sources are Anthropic's [Consumer Terms](https://www.anthropic.com/legal/consumer-terms), [Acceptable Use Policy](https://www.anthropic.com/legal/aup), the Claude Max subscription agreement, and — for anything ambiguous — Anthropic support directly. Verify before scaling beyond personal use.
 
 ## Observability
 
@@ -391,6 +417,7 @@ The check is strict: any drop in `passed` count fails. Case-count changes (i.e. 
 | 7 | Observability: `guardrailsTriggered` wired from `SDKPermissionDenial`; per-session `SessionMetrics` aggregator; pluggable `onTurnComplete(trace)` callback; per-pack eval regression baselines (`--baseline` / `--write-baseline`); `nawaitu.metrics(sessionId)` lookup. |
 | 8 | Cleanup: consolidated session aggregates into `metrics` (dropped duplicate `cumulativeCostUsd` / `turnCount` fields). Level 1 persona: configurable user-facing identity prepended to the orchestrator's system prompt. |
 | 9 | OAuth subscription auth: classifier migrated from raw `@anthropic-ai/sdk` (API-key-only, Haiku) to `@anthropic-ai/claude-agent-sdk` (OAuth-capable, Sonnet 4.6). `ANTHROPIC_API_KEY` now optional; both paths flow through the SDK's auto-resolution. `pnpm chat` first-run wizard + persistent companion config at `~/.nawaitu/companion.json`. |
+| 10 | Release prep (v0.2.0): MIT license, NAWAITU_AUTH=subscription opt-in gate (closes ToS-uncertain default), package.json npm-publishable shape, Node-based bin dispatcher, README rewrite, ARCHITECTURE.md status fix. |
 
 Up next:
 
