@@ -67,10 +67,10 @@
 
 These need to be settled before Plan 1 starts so all four plans are consistent:
 
-1. **License choice.** MIT (permissive, default for public-good projects) vs Apache-2.0 (explicit patent grant) vs BSL/AGPL (network-share-alike). Default proposal: **MIT**. Single file, no friction for users, matches Anthropic's own SDK licensing.
-2. **Subscription-auth posture.** Three options: (a) remove entirely, (b) gate behind opt-in env var with stern warning, (c) keep current behavior with stronger warning. Default proposal: **(b)** — preserves Aman's personal use case while preventing strangers from accidentally landing on the ToS-uncertain path.
-3. **Distribution channel for v1.0.** npm only, or npm + Homebrew, or npm + Homebrew + GitHub release with prebuilt binaries. Default proposal: **npm only for v1.0**, defer brew/binaries unless adoption demand.
-4. **Default packs in TUI.** Generic-only, or all three (current). Default proposal: **Generic-only by default**, Support + Dev Tools opt-in. Locks in during Plan 4 but referenced in Plan 1's README rewrite.
+1. **License choice.** MIT (permissive, default for public-good projects) vs Apache-2.0 (explicit patent grant) vs BSL/AGPL (network-share-alike). Decision: **MIT**. Single file, no friction for users, matches Anthropic's own SDK licensing.
+2. **Subscription-auth posture.** Three options: (a) remove entirely, (b) gate behind opt-in env var with stern warning, (c) keep current behavior with stronger warning. Decision: **(b)** — preserves Aman's personal use case while preventing strangers from accidentally landing on the ToS-uncertain path.
+3. **Distribution channel for v1.0.** npm only, or npm + Homebrew, or npm + Homebrew + GitHub release with prebuilt binaries. Decision: **npm only for v1.0**, defer brew/binaries unless adoption demand.
+4. **Default packs in TUI.** Generic-only, or all three (current). Decision: **Generic-only by default**, Support + Dev Tools opt-in. Locks in during Plan 4 but referenced in Plan 1's README rewrite.
 
 If any of these don't match your preference, redirect before Plan 1 starts.
 
