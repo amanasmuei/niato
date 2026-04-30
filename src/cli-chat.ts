@@ -10,6 +10,7 @@ import {
 import { runSetupWizard } from "./cli/setup-wizard.js";
 import { buildPersonaFromCompanion } from "./cli/persona-builder.js";
 import { runChatRepl } from "./cli/chat-repl.js";
+import { renderAuthError } from "./cli-error-render.js";
 
 // Persistent multi-turn chat entry point. First run launches the setup
 // wizard and saves to ~/.nawaitu/companion.json; subsequent runs load
@@ -37,6 +38,11 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
+  const authMessage = renderAuthError(err);
+  if (authMessage !== null) {
+    process.stderr.write(`${authMessage}\n`);
+    process.exit(2);
+  }
   const msg = err instanceof Error ? err.stack ?? err.message : String(err);
   console.error(msg);
   process.exit(1);
