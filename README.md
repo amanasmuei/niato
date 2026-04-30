@@ -422,6 +422,7 @@ The check is strict: any drop in `passed` count fails. Case-count changes (i.e. 
 | 9 | OAuth subscription auth: classifier migrated from raw `@anthropic-ai/sdk` (API-key-only, Haiku) to `@anthropic-ai/claude-agent-sdk` (OAuth-capable, Sonnet 4.6). `ANTHROPIC_API_KEY` now optional; both paths flow through the SDK's auto-resolution. `pnpm chat` first-run wizard + persistent companion config at `~/.nawaitu/companion.json`. |
 | 10 | Release prep (v0.2.0): MIT license, NAWAITU_AUTH=subscription opt-in gate (closes ToS-uncertain default), package.json npm-publishable shape, Node-based bin dispatcher, README rewrite, ARCHITECTURE.md status fix. |
 | 11 | In-app onboarding (v0.3.0): ApiKeyEntry + CompanionWizard Ink screens replace v0.2's `pnpm chat` hand-off. Install-to-first-turn fully self-contained in the TUI. |
+| 12 | Conversation memory (v0.4.0): SDK sessionId/resume threading via SessionContext.started flag. Cross-turn coherence works in `nawaitu.run()` and the TUI's Resume Last path; the SDK persists transcripts at `~/.nawaitu/sdk-sessions`. |
 
 Up next:
 
