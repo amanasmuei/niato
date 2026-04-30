@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import { type TurnState } from "../hooks/use-nawaitu-session.js";
+import { type TurnState } from "../hooks/use-niato-session.js";
 
 export interface ChatScrollbackProps {
   turns: TurnState[];

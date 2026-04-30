@@ -14,11 +14,11 @@ import React from "react";
 import { render } from "ink-testing-library";
 import { App } from "../../src/cli/tui/app.js";
 import { type Companion } from "../../src/cli/companion-config.js";
-import { makeStubNawaitu } from "./tui/_helpers/stub-nawaitu.js";
+import { makeStubNiato } from "./tui/_helpers/stub-niato.js";
 import { expectDefined } from "./tui/_helpers/expect-defined.js";
 
 // End-to-end smoke test that exercises the full launcher → mode-prompt →
-// session → JSONL flow with the stub Nawaitu (no real Anthropic calls).
+// session → JSONL flow with the stub Niato (no real Anthropic calls).
 //
 // Note on file extension: this is `.test.tsx` (not `.ts` per the plan
 // literal) because the test renders JSX (`<App ...>`). Vitest's include
@@ -26,7 +26,7 @@ import { expectDefined } from "./tui/_helpers/expect-defined.js";
 describe("TUI end-to-end smoke", () => {
   let root: string;
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), "nawaitu-smoke-"));
+    root = mkdtempSync(join(tmpdir(), "niato-smoke-"));
     mkdirSync(join(root, "sessions"), { recursive: true });
     const companion: Companion = {
       version: 1,
@@ -46,7 +46,7 @@ describe("TUI end-to-end smoke", () => {
         companionPath={join(root, "companion.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([{ output: "the answer is 42" }])}
+        niatoFactory={() => makeStubNiato([{ output: "the answer is 42" }])}
         version="0.0.0-smoke"
       />,
     );
@@ -61,7 +61,7 @@ describe("TUI end-to-end smoke", () => {
         companionPath={join(root, "companion.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([{ output: "the answer is 42" }])}
+        niatoFactory={() => makeStubNiato([{ output: "the answer is 42" }])}
         version="0.0.0-smoke"
       />,
     );
@@ -74,7 +74,7 @@ describe("TUI end-to-end smoke", () => {
         companionPath={join(root, "companion.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([{ output: "the answer is 42" }])}
+        niatoFactory={() => makeStubNiato([{ output: "the answer is 42" }])}
         version="0.0.0-smoke"
       />,
     );
@@ -93,7 +93,7 @@ describe("TUI end-to-end smoke", () => {
         companionPath={join(root, "companion.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([{ output: "the answer is 42" }])}
+        niatoFactory={() => makeStubNiato([{ output: "the answer is 42" }])}
         version="0.0.0-smoke"
       />,
     );

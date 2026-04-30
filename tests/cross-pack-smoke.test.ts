@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  createNawaitu,
+  createNiato,
   devToolsPack,
   extractAgentDispatches,
   genericPack,
@@ -28,10 +28,10 @@ const hasKey = Boolean(process.env["ANTHROPIC_API_KEY"]);
 
 describe.skipIf(!hasKey)("smoke: cross-pack composition end-to-end", () => {
   it("dispatches dev_tools.bug_fixer → support.escalate for a refund-webhook bug + ticket request", async () => {
-    const nawaitu = createNawaitu({
+    const niato = createNiato({
       packs: [genericPack, supportPack, devToolsPack],
     });
-    const turn = await nawaitu.run(
+    const turn = await niato.run(
       "The refund webhook is broken — find the bug and open a priority ticket for the on-call engineer.",
     );
 

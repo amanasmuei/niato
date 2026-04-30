@@ -13,10 +13,10 @@ import {
 // is available — the Agent SDK's `query()` resolves auth from either path.
 // Today's heuristic: skip when no env var is set so test runs without a
 // configured API key still pass offline. CI environments with OAuth-only
-// auth can opt-in via `NAWAITU_LIVE_EVALS=1`.
+// auth can opt-in via `NIATO_LIVE_EVALS=1`.
 const liveAuth =
   process.env["ANTHROPIC_API_KEY"] !== undefined ||
-  process.env["NAWAITU_LIVE_EVALS"] === "1";
+  process.env["NIATO_LIVE_EVALS"] === "1";
 
 function summarizeFailures(failures: EvalCaseResult[]): string {
   return failures

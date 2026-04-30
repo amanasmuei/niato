@@ -1,5 +1,5 @@
 import { type DomainPack } from "../packs/DomainPack.js";
-import { createNawaitu } from "../core/compose.js";
+import { createNiato } from "../core/compose.js";
 
 async function readStdinAll(): Promise<string> {
   const chunks: Buffer[] = [];
@@ -26,8 +26,8 @@ export async function runCliOnce(
     process.exit(2);
   }
 
-  const nawaitu = createNawaitu({ packs });
-  const turn = await nawaitu.run(userInput);
+  const niato = createNiato({ packs });
+  const turn = await niato.run(userInput);
 
   process.stdout.write(turn.result);
   process.stdout.write("\n");

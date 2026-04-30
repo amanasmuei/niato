@@ -1,4 +1,4 @@
-import { createNawaitu } from "./core/compose.js";
+import { createNiato } from "./core/compose.js";
 import { genericPack } from "./packs/generic/index.js";
 import { supportPack } from "./packs/support/index.js";
 import { devToolsPack } from "./packs/dev-tools/index.js";
@@ -13,7 +13,7 @@ import { runChatRepl } from "./cli/chat-repl.js";
 import { renderAuthError } from "./cli-error-render.js";
 
 // Persistent multi-turn chat entry point. First run launches the setup
-// wizard and saves to ~/.nawaitu/companion.json; subsequent runs load
+// wizard and saves to ~/.niato/companion.json; subsequent runs load
 // the saved companion and drop straight into the REPL. Pass --reset to
 // re-run the wizard.
 async function main(): Promise<void> {
@@ -29,12 +29,12 @@ async function main(): Promise<void> {
   }
 
   const persona = buildPersonaFromCompanion(companion);
-  const nawaitu = createNawaitu({
+  const niato = createNiato({
     packs: [genericPack, supportPack, devToolsPack],
     persona,
   });
 
-  await runChatRepl(nawaitu, companion);
+  await runChatRepl(niato, companion);
 }
 
 main().catch((err: unknown) => {

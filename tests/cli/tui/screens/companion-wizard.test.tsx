@@ -18,7 +18,7 @@ describe("CompanionWizard", () => {
   let companionPath: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "nawaitu-wizard-"));
+    tmpDir = mkdtempSync(join(tmpdir(), "niato-wizard-"));
     companionPath = join(tmpDir, "companion.json");
   });
 

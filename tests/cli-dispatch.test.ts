@@ -56,11 +56,11 @@ describe("resolveDispatch", () => {
 describe("helpText", () => {
   it("includes the program name and core subcommands", () => {
     const text = helpText();
-    expect(text).toMatch(/^nawaitu —/);
-    expect(text).toContain("nawaitu tui");
-    expect(text).toContain("nawaitu chat");
-    expect(text).toContain("nawaitu login");
+    expect(text).toMatch(/^niato —/);
+    expect(text).toContain("niato tui");
+    expect(text).toContain("niato chat");
+    expect(text).toContain("niato login");
     expect(text).toContain("ANTHROPIC_API_KEY");
-    expect(text).toContain("NAWAITU_AUTH=subscription");
+    expect(text).toContain("NIATO_AUTH=subscription");
   });
 });

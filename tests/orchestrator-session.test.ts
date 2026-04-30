@@ -17,10 +17,10 @@ describe("buildOrchestratorOptions", () => {
     const opts = buildOrchestratorOptions({
       ...baseInput,
       sessionId: "11111111-1111-1111-1111-111111111111",
-      cwd: "/tmp/nawaitu-sessions",
+      cwd: "/tmp/niato-sessions",
     });
     expect(opts.sessionId).toBe("11111111-1111-1111-1111-111111111111");
-    expect(opts.cwd).toBe("/tmp/nawaitu-sessions");
+    expect(opts.cwd).toBe("/tmp/niato-sessions");
     expect(opts.resume).toBeUndefined();
   });
 
@@ -28,11 +28,11 @@ describe("buildOrchestratorOptions", () => {
     const opts = buildOrchestratorOptions({
       ...baseInput,
       resume: "22222222-2222-2222-2222-222222222222",
-      cwd: "/tmp/nawaitu-sessions",
+      cwd: "/tmp/niato-sessions",
     });
     expect(opts.resume).toBe("22222222-2222-2222-2222-222222222222");
     expect(opts.sessionId).toBeUndefined();
-    expect(opts.cwd).toBe("/tmp/nawaitu-sessions");
+    expect(opts.cwd).toBe("/tmp/niato-sessions");
   });
 
   it("omits sessionId/resume when neither is provided", () => {

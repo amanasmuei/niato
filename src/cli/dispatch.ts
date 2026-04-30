@@ -1,4 +1,4 @@
-// Pure subcommand router for bin/nawaitu. The bin script handles process
+// Pure subcommand router for bin/niato. The bin script handles process
 // concerns (spawning, exit codes, version reading); this module owns the
 // arg → entry mapping so it can be unit tested without spinning subprocesses.
 
@@ -33,18 +33,18 @@ export function resolveDispatch(args: readonly string[]): DispatchResult {
 
 export function helpText(): string {
   return [
-    "nawaitu — intent-routing agent on the Claude Agent SDK",
+    "niato — intent-routing agent on the Claude Agent SDK",
     "",
     "Usage:",
-    "  nawaitu                 launch the TUI (default)",
-    "  nawaitu tui             same",
-    "  nawaitu chat [--reset]  legacy multi-turn REPL",
-    "  nawaitu login           OAuth subscription auth (wraps `claude /login`)",
-    "  nawaitu --version       print version",
-    "  nawaitu --help          show this help",
+    "  niato                 launch the TUI (default)",
+    "  niato tui             same",
+    "  niato chat [--reset]  legacy multi-turn REPL",
+    "  niato login           OAuth subscription auth (wraps `claude /login`)",
+    "  niato --version       print version",
+    "  niato --help          show this help",
     "",
     "Auth (set one in your shell):",
     "  ANTHROPIC_API_KEY=sk-ant-...    developer API path (recommended)",
-    "  NAWAITU_AUTH=subscription       Claude subscription path (review ToS)",
+    "  NIATO_AUTH=subscription       Claude subscription path (review ToS)",
   ].join("\n");
 }

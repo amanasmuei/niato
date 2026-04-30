@@ -16,9 +16,9 @@ describe("resolvePacks (TUI default-pack policy)", () => {
     expect(packs.map((p) => p.name)).toEqual(["generic"]);
   });
 
-  it("opts in via NAWAITU_PACKS env var", () => {
+  it("opts in via NIATO_PACKS env var", () => {
     const packs = resolvePacks(all, {
-      NAWAITU_PACKS: "support,dev_tools",
+      NIATO_PACKS: "support,dev_tools",
     });
     expect(packs.map((p) => p.name).sort()).toEqual([
       "dev_tools",
@@ -27,9 +27,9 @@ describe("resolvePacks (TUI default-pack policy)", () => {
     ]);
   });
 
-  it("ignores unknown pack names in NAWAITU_PACKS", () => {
+  it("ignores unknown pack names in NIATO_PACKS", () => {
     const packs = resolvePacks(all, {
-      NAWAITU_PACKS: "support,bogus,dev_tools",
+      NIATO_PACKS: "support,bogus,dev_tools",
     });
     expect(packs.map((p) => p.name).sort()).toEqual([
       "dev_tools",
@@ -38,18 +38,18 @@ describe("resolvePacks (TUI default-pack policy)", () => {
     ]);
   });
 
-  it("ignores empty / whitespace-only NAWAITU_PACKS", () => {
-    expect(resolvePacks(all, { NAWAITU_PACKS: "" }).map((p) => p.name)).toEqual(
+  it("ignores empty / whitespace-only NIATO_PACKS", () => {
+    expect(resolvePacks(all, { NIATO_PACKS: "" }).map((p) => p.name)).toEqual(
       ["generic"],
     );
     expect(
-      resolvePacks(all, { NAWAITU_PACKS: "   ,  ," }).map((p) => p.name),
+      resolvePacks(all, { NIATO_PACKS: "   ,  ," }).map((p) => p.name),
     ).toEqual(["generic"]);
   });
 
-  it("does not duplicate generic when listed in NAWAITU_PACKS", () => {
+  it("does not duplicate generic when listed in NIATO_PACKS", () => {
     const packs = resolvePacks(all, {
-      NAWAITU_PACKS: "generic,support",
+      NIATO_PACKS: "generic,support",
     });
     expect(packs.map((p) => p.name).sort()).toEqual(["generic", "support"]);
   });

@@ -53,7 +53,7 @@ export interface LoadedSession {
 }
 
 export function defaultSessionsDir(): string {
-  return join(homedir(), ".nawaitu", "sessions");
+  return join(homedir(), ".niato", "sessions");
 }
 
 function ensureDir(dir: string): void {

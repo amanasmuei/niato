@@ -7,15 +7,15 @@ export interface PackRegistry {
 }
 
 // TUI-only pack policy: ship Generic by default; Support and Dev Tools
-// opt-in via NAWAITU_PACKS. Reason: Support's MCP is a stub — a stranger
+// opt-in via NIATO_PACKS. Reason: Support's MCP is a stub — a stranger
 // asking for a refund should not get pretend data. The library's
-// createNawaitu({ packs }) entry-point is untouched; embedders pass
+// createNiato({ packs }) entry-point is untouched; embedders pass
 // packs explicitly as before.
 export function resolvePacks(
   registry: PackRegistry,
   env: NodeJS.ProcessEnv,
 ): DomainPack[] {
-  const requested = parsePackList(env["NAWAITU_PACKS"]);
+  const requested = parsePackList(env["NIATO_PACKS"]);
   const result: DomainPack[] = [registry.generic];
   for (const name of requested) {
     if (name === "generic") continue;

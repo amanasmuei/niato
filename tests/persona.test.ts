@@ -63,7 +63,7 @@ describe("buildPersonaPreamble", () => {
 describe("buildOrchestratorSystemPrompt", () => {
   it("returns the original ORCHESTRATOR_PROMPT verbatim when no persona is set", () => {
     const out = buildOrchestratorSystemPrompt(undefined);
-    expect(out.startsWith("You are the Nawaitu orchestrator.")).toBe(true);
+    expect(out.startsWith("You are the Niato orchestrator.")).toBe(true);
   });
 
   it("prepends the persona preamble above the operational orchestrator prompt", () => {
@@ -74,10 +74,10 @@ describe("buildOrchestratorSystemPrompt", () => {
     expect(out.startsWith("You are Layla.")).toBe(true);
     expect(out).toContain("Warm, faith-aware. Address the user by name.");
     // The operational identity stays intact below the persona preamble.
-    expect(out).toContain("You are the Nawaitu orchestrator.");
+    expect(out).toContain("You are the Niato orchestrator.");
     // Persona block precedes operational block.
     expect(out.indexOf("Layla")).toBeLessThan(
-      out.indexOf("Nawaitu orchestrator"),
+      out.indexOf("Niato orchestrator"),
     );
   });
 });

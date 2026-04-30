@@ -3,12 +3,12 @@ import { Box, Text } from "ink";
 import Spinner from "ink-spinner";
 import { type IntentResult } from "../../../core/classifier/types.js";
 import { type TurnRecord } from "../../../observability/trace.js";
-import { type SessionPhase } from "../hooks/use-nawaitu-session.js";
+import { type SessionPhase } from "../hooks/use-niato-session.js";
 import { type SessionMode } from "../store/sessions.js";
 
 // `| undefined` (not bare `?:`) so callers may either omit the prop OR
 // pass `undefined` explicitly under `exactOptionalPropertyTypes: true`.
-// This matches the shape of `useNawaituSession`'s `classification` and
+// This matches the shape of `useNiatoSession`'s `classification` and
 // `trace` returns, which are `IntentResult | undefined` / `TurnRecord |
 // undefined` and would otherwise need a conditional spread at every
 // call site.
@@ -35,7 +35,7 @@ function tickFor(
   return <Text color="gray">·</Text>;
 }
 
-// Always-visible status bar surfacing Nawaitu's "declare before act"
+// Always-visible status bar surfacing Niato's "declare before act"
 // philosophy: classify → dispatch ticks plus latency/cost. Casual mode
 // is one line; dev mode adds the dispatch path on a second line.
 export function Footer({

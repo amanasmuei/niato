@@ -1,7 +1,7 @@
 {
-  "name": "nawaitu",
+  "name": "niato",
   "version": "1.0.0",
-  "description": "Intent-routing agent on the Claude Agent SDK. Nawaitu (نَوَيْتُ) — \"I have intended\" — declares before it acts.",
+  "description": "Intent-routing agent on the Claude Agent SDK. Niato — \"intention\", from the Malay/Indonesian niat — declares before it acts.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,7 +19,7 @@
     "ARCHITECTURE.md"
   ],
   "bin": {
-    "nawaitu": "bin/nawaitu"
+    "niato": "bin/niato"
   },
   "scripts": {
     "dev": "tsx --env-file=.env src/cli.ts",
@@ -48,7 +48,8 @@
     "agent-sdk",
     "intent-routing",
     "ai-agent",
-    "anthropic"
+    "anthropic",
+    "niat"
   ],
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.121",

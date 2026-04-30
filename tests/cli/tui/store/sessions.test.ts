@@ -35,7 +35,7 @@ function expectLoaded(session: LoadedSession | null): LoadedSession {
 describe("session store", () => {
   let dir: string;
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "nawaitu-test-"));
+    dir = mkdtempSync(join(tmpdir(), "niato-test-"));
   });
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });

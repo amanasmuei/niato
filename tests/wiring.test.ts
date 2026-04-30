@@ -2,19 +2,19 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
-  createNawaitu,
+  createNiato,
   devToolsPack,
   genericPack,
   mergeHooks,
   mergePackAgents,
   stubClassifier,
   supportPack,
-  NawaituBudgetExceededError,
+  NiatoBudgetExceededError,
   type Config,
   type Hooks,
   type SessionContext,
 } from "../src/index.js";
-import { NawaituAuthError } from "../src/core/errors.js";
+import { NiatoAuthError } from "../src/core/errors.js";
 import { loadConfig, resolveAuthMode } from "../src/core/config.js";
 import { ensureBudget } from "../src/core/compose.js";
 import { emptySessionMetrics } from "../src/observability/metrics.js";
@@ -41,22 +41,22 @@ function fakeSession(cumulativeCostUsd: number): SessionContext {
 
 const fakeConfig: Config = {
   ANTHROPIC_API_KEY: "test-key-not-real",
-  NAWAITU_LOG_LEVEL: "error",
+  NIATO_LOG_LEVEL: "error",
 };
 
-describe("createNawaitu", () => {
+describe("createNiato", () => {
   it("exposes run()", () => {
-    const nawaitu = createNawaitu({
+    const niato = createNiato({
       packs: [genericPack],
       classifier: stubClassifier,
       config: fakeConfig,
     });
-    expect(typeof nawaitu.run).toBe("function");
+    expect(typeof niato.run).toBe("function");
   });
 
   it("rejects an empty pack list", () => {
     expect(() =>
-      createNawaitu({
+      createNiato({
         packs: [],
         classifier: stubClassifier,
         config: fakeConfig,
@@ -372,13 +372,13 @@ describe("ensureBudget", () => {
     }).not.toThrow();
   });
 
-  it("throws NawaituBudgetExceededError at or over the limit", () => {
+  it("throws NiatoBudgetExceededError at or over the limit", () => {
     expect(() => {
       ensureBudget(fakeSession(0.5), 0.5);
-    }).toThrow(NawaituBudgetExceededError);
+    }).toThrow(NiatoBudgetExceededError);
     expect(() => {
       ensureBudget(fakeSession(1.2), 0.5);
-    }).toThrow(NawaituBudgetExceededError);
+    }).toThrow(NiatoBudgetExceededError);
   });
 
   it("the thrown error carries cumulative and limit values", () => {
@@ -386,8 +386,8 @@ describe("ensureBudget", () => {
       ensureBudget(fakeSession(1.234), 0.5);
       throw new Error("expected throw");
     } catch (err) {
-      expect(err).toBeInstanceOf(NawaituBudgetExceededError);
-      if (err instanceof NawaituBudgetExceededError) {
+      expect(err).toBeInstanceOf(NiatoBudgetExceededError);
+      if (err instanceof NiatoBudgetExceededError) {
         expect(err.cumulativeUsd).toBeCloseTo(1.234);
         expect(err.limitUsd).toBe(0.5);
       }
@@ -399,26 +399,26 @@ describe("loadConfig", () => {
   it("succeeds without ANTHROPIC_API_KEY (Phase 9: OAuth path)", () => {
     const cfg = loadConfig({});
     expect(cfg.ANTHROPIC_API_KEY).toBeUndefined();
-    expect(cfg.NAWAITU_LOG_LEVEL).toBe("info");
+    expect(cfg.NIATO_LOG_LEVEL).toBe("info");
   });
 
   it("succeeds with ANTHROPIC_API_KEY set (API-key path)", () => {
     const cfg = loadConfig({ ANTHROPIC_API_KEY: "sk-test" });
     expect(cfg.ANTHROPIC_API_KEY).toBe("sk-test");
-    expect(cfg.NAWAITU_LOG_LEVEL).toBe("info");
+    expect(cfg.NIATO_LOG_LEVEL).toBe("info");
   });
 
   it("rejects an empty-string ANTHROPIC_API_KEY", () => {
     expect(() => loadConfig({ ANTHROPIC_API_KEY: "" })).toThrow();
   });
 
-  it("accepts NAWAITU_AUTH=subscription", () => {
-    const cfg = loadConfig({ NAWAITU_AUTH: "subscription" });
-    expect(cfg.NAWAITU_AUTH).toBe("subscription");
+  it("accepts NIATO_AUTH=subscription", () => {
+    const cfg = loadConfig({ NIATO_AUTH: "subscription" });
+    expect(cfg.NIATO_AUTH).toBe("subscription");
   });
 
-  it("rejects unknown NAWAITU_AUTH values", () => {
-    expect(() => loadConfig({ NAWAITU_AUTH: "garbage" })).toThrow();
+  it("rejects unknown NIATO_AUTH values", () => {
+    expect(() => loadConfig({ NIATO_AUTH: "garbage" })).toThrow();
   });
 });
 
@@ -429,12 +429,12 @@ describe("resolveAuthMode", () => {
     ).toBe("api_key");
   });
 
-  it("throws NawaituAuthError when neither auth path is configured", () => {
-    expect(() => resolveAuthMode(loadConfig({}))).toThrow(NawaituAuthError);
+  it("throws NiatoAuthError when neither auth path is configured", () => {
+    expect(() => resolveAuthMode(loadConfig({}))).toThrow(NiatoAuthError);
   });
 });
 
-describe("nawaitu.run session threading (v0.4)", () => {
+describe("niato.run session threading (v0.4)", () => {
   it("passes sessionId on first turn and resume on subsequent turns, with stable cwd", async () => {
     const captured: {
       sessionId: string | undefined;
@@ -453,7 +453,7 @@ describe("nawaitu.run session threading (v0.4)", () => {
       },
     );
 
-    const nawaitu = createNawaitu({
+    const niato = createNiato({
       packs: [genericPack],
       classifier: {
         classify: (_input: string) =>
@@ -464,17 +464,17 @@ describe("nawaitu.run session threading (v0.4)", () => {
           }),
       },
       orchestratorRunner: stubOrchestratorRun,
-      config: { ANTHROPIC_API_KEY: "sk-test", NAWAITU_LOG_LEVEL: "error" },
+      config: { ANTHROPIC_API_KEY: "sk-test", NIATO_LOG_LEVEL: "error" },
     });
 
-    const turn1 = await nawaitu.run("hi");
-    const turn2 = await nawaitu.run("again", turn1.session.id);
+    const turn1 = await niato.run("hi");
+    const turn2 = await niato.run("again", turn1.session.id);
 
     expect(captured[0]?.sessionId).toBe(turn1.session.id);
     expect(captured[0]?.resume).toBeUndefined();
     expect(captured[1]?.sessionId).toBeUndefined();
     expect(captured[1]?.resume).toBe(turn1.session.id);
-    expect(captured[0]?.cwd).toBe(join(homedir(), ".nawaitu", "sdk-sessions"));
+    expect(captured[0]?.cwd).toBe(join(homedir(), ".niato", "sdk-sessions"));
     expect(turn2.session.id).toBe(turn1.session.id);
   });
 });

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Nawaitu CLI dispatcher (Node-based, no pnpm dependency).
+// Niato CLI dispatcher (Node-based, no pnpm dependency).
 // Routes subcommands to compiled entries under dist/. See
 // src/cli/dispatch.ts for the pure routing logic.
 
@@ -28,8 +28,8 @@ if (result.kind === "help") {
 }
 
 if (result.kind === "unknown") {
-  process.stderr.write(`nawaitu: unknown subcommand '${result.subcommand}'\n`);
-  process.stderr.write("Run `nawaitu --help` for usage.\n");
+  process.stderr.write(`niato: unknown subcommand '${result.subcommand}'\n`);
+  process.stderr.write("Run `niato --help` for usage.\n");
   process.exit(2);
 }
 
@@ -43,6 +43,6 @@ child.on("exit", (code, signal) => {
   else process.exit(code ?? 1);
 });
 child.on("error", (err) => {
-  process.stderr.write(`nawaitu: failed to launch entry: ${err.message}\n`);
+  process.stderr.write(`niato: failed to launch entry: ${err.message}\n`);
   process.exit(1);
 });

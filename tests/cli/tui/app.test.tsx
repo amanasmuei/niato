@@ -7,7 +7,7 @@ import React from "react";
 import { render } from "ink-testing-library";
 import { App } from "../../../src/cli/tui/app.js";
 import { type Companion } from "../../../src/cli/companion-config.js";
-import { makeStubNawaitu } from "./_helpers/stub-nawaitu.js";
+import { makeStubNiato } from "./_helpers/stub-niato.js";
 
 const companion: Companion = {
   version: 1,
@@ -30,7 +30,7 @@ describe("App shell", () => {
   let savedApiKey: string | undefined;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), "nawaitu-app-"));
+    root = mkdtempSync(join(tmpdir(), "niato-app-"));
     mkdirSync(join(root, "sessions"), { recursive: true });
     savedApiKey = process.env["ANTHROPIC_API_KEY"];
   });
@@ -50,7 +50,7 @@ describe("App shell", () => {
         companionPath={companionPath}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([])}
+        niatoFactory={() => makeStubNiato([])}
         version="0.0.0-test"
       />,
     );
@@ -63,11 +63,11 @@ describe("App shell", () => {
         companionPath={join(root, "missing.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([])}
+        niatoFactory={() => makeStubNiato([])}
         version="0.0.0-test"
       />,
     );
-    expect(lastFrame()).toContain("Welcome to Nawaitu");
+    expect(lastFrame()).toContain("Welcome to Niato");
   });
 
   it("first-run → api-key entry → companion wizard → launcher", async () => {
@@ -79,14 +79,14 @@ describe("App shell", () => {
         companionPath={join(root, "missing-companion.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([])}
+        niatoFactory={() => makeStubNiato([])}
         version="0.3.0-test"
       />,
     );
     await flush();
 
     // first-run shown — pick API key (item 2: arrow down, enter)
-    expect(lastFrame() ?? "").toContain("Welcome to Nawaitu");
+    expect(lastFrame() ?? "").toContain("Welcome to Niato");
     stdin.write(ARROW_DOWN); // ↓ to api-key item
     await flush();
     stdin.write(ENTER); // pick api-key

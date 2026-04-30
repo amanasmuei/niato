@@ -3,21 +3,21 @@ import React from "react";
 import { Text } from "ink";
 import { render } from "ink-testing-library";
 import {
-  useNawaituSession,
+  useNiatoSession,
   type SessionPhase,
-  type UseNawaitu,
-} from "../../../../src/cli/tui/hooks/use-nawaitu-session.js";
-import { makeStubNawaitu } from "../_helpers/stub-nawaitu.js";
+  type UseNiato,
+} from "../../../../src/cli/tui/hooks/use-niato-session.js";
+import { makeStubNiato } from "../_helpers/stub-niato.js";
 import { expectDefined } from "../_helpers/expect-defined.js";
 
 function Probe({
   capture,
 }: {
-  capture: (api: UseNawaitu) => void;
+  capture: (api: UseNiato) => void;
 }): React.ReactElement {
-  const api = useNawaituSession(
+  const api = useNiatoSession(
     () =>
-      makeStubNawaitu([{ output: "hi back" }, { output: "again" }]),
+      makeStubNiato([{ output: "hi back" }, { output: "again" }]),
     "sess-1",
   );
   React.useEffect(() => {
@@ -30,9 +30,9 @@ function Probe({
   );
 }
 
-describe("useNawaituSession", () => {
+describe("useNiatoSession", () => {
   it("phase progresses idle → done after run()", async () => {
-    let last: UseNawaitu | undefined;
+    let last: UseNiato | undefined;
     const { lastFrame, rerender } = render(
       <Probe
         capture={(a): void => {
@@ -59,12 +59,12 @@ describe("useNawaituSession", () => {
     expect(firstTurn.output).toBe("hi back");
   });
 
-  it("captures error message when nawaitu throws", async () => {
-    let last: UseNawaitu | undefined;
+  it("captures error message when niato throws", async () => {
+    let last: UseNiato | undefined;
     function ErrProbe(): React.ReactElement {
-      const api = useNawaituSession(
+      const api = useNiatoSession(
         () =>
-          makeStubNawaitu([
+          makeStubNiato([
             { output: "", throws: new Error("boom") },
           ]),
         "sess-2",

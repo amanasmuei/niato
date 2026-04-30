@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createNawaitu } from "../src/core/compose.js";
+import { createNiato } from "../src/core/compose.js";
 import { genericPack } from "../src/packs/generic/index.js";
 import {
   type OrchestratorInput,
@@ -33,18 +33,18 @@ describe("conversation memory (v0.4)", () => {
   it("turn 2 in same session uses SDK resume; turn 1 uses sessionId", async () => {
     const calls: CapturedSessionArgs[] = [];
     const stubRun = vi.fn(buildStubRunner(calls));
-    const nawaitu = createNawaitu({
+    const niato = createNiato({
       packs: [genericPack],
       classifier: stubClassifier,
       orchestratorRunner: stubRun,
-      config: { ANTHROPIC_API_KEY: "sk-test", NAWAITU_LOG_LEVEL: "info" },
+      config: { ANTHROPIC_API_KEY: "sk-test", NIATO_LOG_LEVEL: "info" },
     });
 
-    const turn1 = await nawaitu.run("turn one");
+    const turn1 = await niato.run("turn one");
     expect(calls[0]?.sessionId).toBe(turn1.session.id);
     expect(calls[0]?.resume).toBeUndefined();
 
-    const turn2 = await nawaitu.run("turn two", turn1.session.id);
+    const turn2 = await niato.run("turn two", turn1.session.id);
     expect(calls[1]?.sessionId).toBeUndefined();
     expect(calls[1]?.resume).toBe(turn1.session.id);
     expect(turn2.session.id).toBe(turn1.session.id);
@@ -53,15 +53,15 @@ describe("conversation memory (v0.4)", () => {
   it("a different sessionId starts fresh (sessionId, not resume)", async () => {
     const calls: CapturedSessionArgs[] = [];
     const stubRun = vi.fn(buildStubRunner(calls));
-    const nawaitu = createNawaitu({
+    const niato = createNiato({
       packs: [genericPack],
       classifier: stubClassifier,
       orchestratorRunner: stubRun,
-      config: { ANTHROPIC_API_KEY: "sk-test", NAWAITU_LOG_LEVEL: "info" },
+      config: { ANTHROPIC_API_KEY: "sk-test", NIATO_LOG_LEVEL: "info" },
     });
 
-    await nawaitu.run("a");
-    await nawaitu.run("b", "33333333-3333-3333-3333-333333333333");
+    await niato.run("a");
+    await niato.run("b", "33333333-3333-3333-3333-333333333333");
 
     expect(calls[0]?.resume).toBeUndefined();
     expect(calls[1]?.resume).toBeUndefined();

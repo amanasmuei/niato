@@ -1,4 +1,4 @@
-# Nawaitu — Phase 1 kickoff prompt for Claude Code
+# Niato — Phase 1 kickoff prompt for Claude Code
 
 Paste the block below into Claude Code (in a fresh empty directory containing `ARCHITECTURE.md` and `CLAUDE.md`) to start the build.
 
@@ -7,20 +7,20 @@ Paste the block below into Claude Code (in a fresh empty directory containing `A
 ## The prompt
 
 ```
-I'm building Nawaitu — an intent-routing agent on the Claude Agent SDK in TypeScript. The name is Arabic for "I have intended" and reflects the design: declare intent before acting at every layer.
+I'm building Niato — an intent-routing agent on the Claude Agent SDK in TypeScript. The name is Arabic for "I have intended" and reflects the design: declare intent before acting at every layer.
 
 The full architecture is in ARCHITECTURE.md and the project conventions are in CLAUDE.md — read both before doing anything.
 
 We're starting Phase 1 from §15 of the architecture: the skeleton. Scope:
 
-1. Project setup — pnpm, TypeScript strict mode, vitest, eslint with the @typescript-eslint/recommended-strict ruleset, the directory layout from §13. Package name: "nawaitu".
+1. Project setup — pnpm, TypeScript strict mode, vitest, eslint with the @typescript-eslint/recommended-strict ruleset, the directory layout from §13. Package name: "niato".
 2. Core types — DomainPack interface, IntentResult, AgentDefinition wrapper, hook event shapes. Use zod for runtime validation at trust boundaries.
 3. Stub classifier — returns a hardcoded { intent: "question", domain: "generic", confidence: 0.95 } for every input. Real Haiku call comes in Phase 2.
 4. Orchestrator — wires up the Agent SDK with allowedTools restricted to ["Agent"], settingSources: [], and a system prompt that enforces the routing invariants from §5.
 5. Generic pack — minimum viable: retrieval, action, escalate specialists per §7.1. Use the built-in SDK tools only; no MCP servers yet.
-6. Entry point — export createNawaitu({ packs, hooks, ... }) from src/index.ts.
+6. Entry point — export createNiato({ packs, hooks, ... }) from src/index.ts.
 7. End-to-end smoke test — a single test that sends "what is 2+2" through the full loop and asserts the retrieval specialist runs.
-8. README — one-paragraph project description (include the meaning of "Nawaitu"), "how to run" section, and a link to ARCHITECTURE.md.
+8. README — one-paragraph project description (include the meaning of "Niato"), "how to run" section, and a link to ARCHITECTURE.md.
 
 Constraints:
 - TypeScript strict, no `any`, no `as` casts unless commented.
@@ -51,7 +51,7 @@ Start by reading ARCHITECTURE.md and CLAUDE.md, then propose the plan.
 
 ## How to use it
 
-1. Drop `ARCHITECTURE.md` and `CLAUDE.md` into an empty directory called `nawaitu/`.
+1. Drop `ARCHITECTURE.md` and `CLAUDE.md` into an empty directory called `niato/`.
 2. `git init && git add . && git commit -m "architecture and conventions"`
 3. Open Claude Code in that directory: `claude` from the terminal.
 4. Paste the prompt above.
@@ -60,7 +60,7 @@ Start by reading ARCHITECTURE.md and CLAUDE.md, then propose the plan.
 
 ## Why the prompt is shaped this way
 
-**Plan mode first.** Claude Code's `plan` permission mode is the right gate for greenfield work. Forces a "show me first" step before any file is created — which is itself a Nawaitu pattern.
+**Plan mode first.** Claude Code's `plan` permission mode is the right gate for greenfield work. Forces a "show me first" step before any file is created — which is itself a Niato pattern.
 
 **Read the docs before acting.** Without this line, Claude Code might start scaffolding from its own priors. The doc is the spec; we want the doc to be authoritative.
 

@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 
 // Approach A login: thin wrapper that delegates to `claude /login`. Same
 // OAuth flow, same token storage (~/.claude/), same Anthropic-facing
-// endpoints — Nawaitu just makes the command discoverable under its own
+// endpoints — Niato just makes the command discoverable under its own
 // surface so users don't have to remember Claude Code's CLI separately.
 //
 // Deliberately does NOT reimplement the OAuth flow. That would require an
@@ -32,7 +32,7 @@ function isFileNotFound(err: unknown): boolean {
 
 async function main(): Promise<void> {
   console.log(
-    "Nawaitu uses Claude Code's authentication for the subscription path.",
+    "Niato uses Claude Code's authentication for the subscription path.",
   );
   console.log("Launching `claude /login`...\n");
 
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
     if (isFileNotFound(err)) {
       console.error("\nClaude Code isn't installed (or `claude` isn't on PATH).\n");
       console.error(
-        "Nawaitu uses Claude Code's OAuth session for the subscription auth path.",
+        "Niato uses Claude Code's OAuth session for the subscription auth path.",
       );
       console.error(`Install Claude Code: ${CLAUDE_CODE_INSTALL_URL}`);
       console.error("Then run `pnpm login` again.\n");

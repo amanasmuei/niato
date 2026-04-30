@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  createNawaitu,
+  createNiato,
   extractAgentDispatches,
   supportPack,
 } from "../src/index.js";
@@ -18,8 +18,8 @@ const hasKey = Boolean(process.env["ANTHROPIC_API_KEY"]);
 
 describe.skipIf(!hasKey)("smoke: Support pack end-to-end", () => {
   it("dispatches support.ticket_lookup for an order_status query", async () => {
-    const nawaitu = createNawaitu({ packs: [supportPack] });
-    const turn = await nawaitu.run(
+    const niato = createNiato({ packs: [supportPack] });
+    const turn = await niato.run(
       "What's the status of ticket TKT-12345? It's been a few days.",
     );
 
@@ -32,8 +32,8 @@ describe.skipIf(!hasKey)("smoke: Support pack end-to-end", () => {
   }, 180_000);
 
   it("dispatches support.refund_processor for a sub-threshold refund", async () => {
-    const nawaitu = createNawaitu({ packs: [supportPack] });
-    const turn = await nawaitu.run(
+    const niato = createNiato({ packs: [supportPack] });
+    const turn = await niato.run(
       "Please refund $15 on order ORD-99 — the item arrived damaged.",
     );
 
@@ -47,8 +47,8 @@ describe.skipIf(!hasKey)("smoke: Support pack end-to-end", () => {
   }, 180_000);
 
   it("denies a sub-threshold-violating refund via the dollar-limit hook", async () => {
-    const nawaitu = createNawaitu({ packs: [supportPack] });
-    const turn = await nawaitu.run(
+    const niato = createNiato({ packs: [supportPack] });
+    const turn = await niato.run(
       "I need a $250 refund on order ORD-9001 — it never arrived.",
     );
 

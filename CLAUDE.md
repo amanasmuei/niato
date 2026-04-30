@@ -1,6 +1,6 @@
-# Project: Nawaitu
+# Project: Niato
 
-> *Nawaitu* (نَوَيْتُ) — Arabic for *"I have intended"*, the formal declaration of intent before an act.
+> *Niato* — derived from *niat* (Malay/Indonesian for *"intention"*, from the Arabic root نِيَّة). The formal declaration of intent before an act.
 >
 > An intent-routing agent built on the Claude Agent SDK. Every meaningful action is preceded by a stated intent: classify, plan, approve, act.
 
@@ -24,7 +24,7 @@ A TypeScript service that classifies user intent, dispatches to specialist subag
 
 Follow §13 of `ARCHITECTURE.md` exactly. Don't invent new top-level directories. New code goes inside `src/core/`, `src/packs/<pack>/`, `src/tools/`, `src/memory/`, `src/guardrails/`, or `src/observability/`.
 
-The package is published as `nawaitu`. The entry-point factory is `createNawaitu(...)`.
+The package is published as `niato`. The entry-point factory is `createNiato(...)`.
 
 ## Coding conventions
 
@@ -44,7 +44,7 @@ The package is published as `nawaitu`. The entry-point factory is `createNawaitu
 4. **Subagents do not inherit parent context.** Anything a specialist needs (file paths, entities, prior decisions) must be in the prompt string passed to the `Agent` tool.
 5. **Hooks are enforcement, not logging.** A `preToolUse` hook returning `{ action: "block" }` actually blocks. Logging hooks should sit alongside, not replace, enforcement.
 6. **Specialists in a pack have minimum-viable tool allowlists.** If a specialist doesn't need `Bash`, it doesn't get `Bash`.
-7. **Declare before act.** Nawaitu's core philosophy: classifier states intent, orchestrator states plan, guardrails state what's about to happen — then the system acts. Do not introduce code paths that act without declaring.
+7. **Declare before act.** Niato's core philosophy: classifier states intent, orchestrator states plan, guardrails state what's about to happen — then the system acts. Do not introduce code paths that act without declaring.
 
 ## Testing
 
@@ -74,7 +74,7 @@ The package is published as `nawaitu`. The entry-point factory is `createNawaitu
 
 ```
 pnpm install              # install deps
-pnpm dev                  # run Nawaitu locally with a CLI driver
+pnpm dev                  # run Niato locally with a CLI driver
 pnpm typecheck            # tsc --noEmit
 pnpm lint                 # eslint
 pnpm test                 # vitest

@@ -4,7 +4,7 @@ import { type TurnRecord } from "./trace.js";
 // turn settles. Single source of truth for per-session aggregates —
 // SessionContext exposes only `metrics`, not duplicate top-level fields.
 // Production deployments that need cross-process aggregation wire it
-// through NawaituOptions.onTurnComplete rather than reading this map.
+// through NiatoOptions.onTurnComplete rather than reading this map.
 export interface SessionMetrics {
   turnCount: number;
   cumulativeCostUsd: number;

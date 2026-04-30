@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { App } from "./app.js";
-import { createNawaitu, type Nawaitu } from "../../core/compose.js";
+import { createNiato, type Niato } from "../../core/compose.js";
 import { genericPack } from "../../packs/generic/index.js";
 import { supportPack } from "../../packs/support/index.js";
 import { devToolsPack } from "../../packs/dev-tools/index.js";
@@ -43,8 +43,8 @@ async function main(): Promise<void> {
     process.env,
   );
 
-  const nawaituFactory = (logger: Logger): Nawaitu =>
-    createNawaitu({
+  const niatoFactory = (logger: Logger): Niato =>
+    createNiato({
       packs,
       logger,
       ...(companion !== null
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
     });
 
   const { waitUntilExit } = render(
-    <App nawaituFactory={nawaituFactory} version={version} />,
+    <App niatoFactory={niatoFactory} version={version} />,
   );
   await waitUntilExit();
 }

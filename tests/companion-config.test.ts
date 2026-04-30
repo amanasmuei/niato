@@ -12,8 +12,8 @@ let workDir: string;
 let configPath: string;
 
 beforeEach(() => {
-  workDir = mkdtempSync(join(tmpdir(), "nawaitu-companion-"));
-  configPath = join(workDir, ".nawaitu", "companion.json");
+  workDir = mkdtempSync(join(tmpdir(), "niato-companion-"));
+  configPath = join(workDir, ".niato", "companion.json");
 });
 
 afterEach(() => {

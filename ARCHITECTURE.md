@@ -1,6 +1,6 @@
-# Nawaitu — architecture
+# Niato — architecture
 
-> *Nawaitu* (نَوَيْتُ) — Arabic for *"I have intended"*, the formal declaration of intent before an act.
+> *Niato* — derived from *niat* (Malay/Indonesian for *"intention"*, from the Arabic root نِيَّة). The formal declaration of intent before an act.
 >
 > A production-grade intent-routing agent built on the **Claude Agent SDK**, in **TypeScript**, designed around a **shared core + pluggable Domain Packs**. The system declares what it's about to do, then does it — the same pattern enforced at every layer: classify, plan, approve, act.
 
@@ -86,7 +86,7 @@ raw user input
 [Opus orchestrator] ◄── reads classification, picks pack, dispatches specialist
 ```
 
-This is Nawaitu's first declaration: the classifier states the intent before any action is taken.
+This is Niato's first declaration: the classifier states the intent before any action is taken.
 
 Confidence policy:
 
@@ -120,7 +120,7 @@ Routing invariants the orchestrator enforces:
 3. After every specialist returns, the orchestrator decides: respond, dispatch another, or ask the user a clarifier.
 4. Any specialist returning a `requires_human_approval` payload halts the loop until the approval hook resolves.
 
-This is Nawaitu's second declaration: the orchestrator states the plan before executing it.
+This is Niato's second declaration: the orchestrator states the plan before executing it.
 
 ---
 
@@ -308,10 +308,10 @@ Notable design choices:
 
 ### 7.4 Composing multiple packs
 
-A real Nawaitu deployment will likely run multiple packs simultaneously. Example: an internal assistant that handles both engineering questions and support escalations from inside Slack.
+A real Niato deployment will likely run multiple packs simultaneously. Example: an internal assistant that handles both engineering questions and support escalations from inside Slack.
 
 ```ts
-const agent = createNawaitu({
+const agent = createNiato({
   packs: [genericPack, supportPack, devToolsPack],
   globalHooks: [authzHook, costLimitHook, observabilityHook],
   observability: { tracer, metrics, costTracker },
@@ -364,7 +364,7 @@ Subagents don't inherit parent skills. Each pack lists which skills its speciali
 
 ## 10. Guardrails — *the gate before action*
 
-Defense in depth: permissions, hooks, validators. Together these are Nawaitu's third declaration: the gate that says *"this is what I'm about to do — confirm before I proceed."*
+Defense in depth: permissions, hooks, validators. Together these are Niato's third declaration: the gate that says *"this is what I'm about to do — confirm before I proceed."*
 
 ### Permission policies
 
@@ -459,7 +459,7 @@ Levers:
 ## 13. Repository layout
 
 ```
-nawaitu/
+niato/
 ├── src/
 │   ├── core/
 │   │   ├── ingress.ts                  # auth, rate limit, idempotency
@@ -470,7 +470,7 @@ nawaitu/
 │   │   ├── orchestrator/
 │   │   │   ├── prompt.ts
 │   │   │   └── orchestrator.ts         # main Agent SDK loop, dispatches specialists
-│   │   └── compose.ts                  # createNawaitu({ packs, hooks, ... })
+│   │   └── compose.ts                  # createNiato({ packs, hooks, ... })
 │   │
 │   ├── packs/
 │   │   ├── DomainPack.ts               # interface
@@ -528,7 +528,7 @@ nawaitu/
 
 Conventions:
 
-- Entry-point factory is `createNawaitu(...)`. The package is published as `nawaitu`.
+- Entry-point factory is `createNiato(...)`. The package is published as `niato`.
 - One file per `AgentDefinition`. Prompts live in adjacent `.md` files when over ~30 lines.
 - All prompts versioned in git. Never load from a database at runtime.
 - All MCP URLs and credentials referenced via env vars or vault paths. No literals in code.
@@ -568,18 +568,18 @@ Resist the urge to spin up a fourth pack before the first three are stable. Pack
 
 ---
 
-## 16. What Nawaitu is not
+## 16. What Niato is not
 
 - Not a single mega-agent. Those degrade fast as scope grows.
-- Not a peer-to-peer agent team. Teams shine for many parallel independent tasks (50 ticket triages); Nawaitu is a sequential intent router with composition.
-- Not a chatbot. A chatbot replies; Nawaitu acts.
+- Not a peer-to-peer agent team. Teams shine for many parallel independent tasks (50 ticket triages); Niato is a sequential intent router with composition.
+- Not a chatbot. A chatbot replies; Niato acts.
 - Not a one-pack monolith. The pack abstraction is the core idea — using it for a single pack still pays for itself in testability.
 
 ---
 
 ## 17. About the name
 
-**Nawaitu** (نَوَيْتُ) is Arabic for *"I have intended"* — the formal first-person declaration of intent before an act. It captures the design philosophy of this system: every meaningful action is preceded by a stated intent. The classifier declares the intent. The orchestrator declares the plan. The guardrails declare what's about to happen. Then, and only then, the system acts.
+**Niato** is derived from *niat* — the Malay/Indonesian word for *"intention"*, sharing its Arabic root نِيَّة (niyya) with the Indonesian/Malay tradition of declaring intent before an act. The name captures the design philosophy of this system: every meaningful action is preceded by a stated intent. The classifier declares the intent. The orchestrator declares the plan. The guardrails declare what's about to happen. Then, and only then, the system acts.
 
 The whole architecture is a series of declarations before actions.
 

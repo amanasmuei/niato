@@ -4,9 +4,9 @@ import { ChatScrollback } from "../components/chat-scrollback.js";
 import { Footer } from "../components/footer.js";
 import { TextInput } from "../components/text-input.js";
 import {
-  useNawaituSession,
+  useNiatoSession,
   type TurnState,
-} from "../hooks/use-nawaitu-session.js";
+} from "../hooks/use-niato-session.js";
 import {
   appendSessionStart,
   appendTurn,
@@ -14,7 +14,7 @@ import {
   type SessionMode,
 } from "../store/sessions.js";
 import { type Companion } from "../../companion-config.js";
-import { type Nawaitu } from "../../../core/compose.js";
+import { type Niato } from "../../../core/compose.js";
 import { type Logger } from "../../../observability/log.js";
 
 // `sessionsDir?: string | undefined` (vs bare `?:`) so callers operating
@@ -25,13 +25,13 @@ export interface SessionProps {
   mode: SessionMode;
   sessionId: string;
   sessionsDir?: string | undefined;
-  nawaituFactory: (logger: Logger) => Nawaitu;
+  niatoFactory: (logger: Logger) => Niato;
   replayedTurns: TurnState[];
   onExit: () => void;
 }
 
 // Top-level chat screen — composes ChatScrollback + TextInput + Footer
-// and threads `useNawaituSession` with on-turn JSONL persistence.
+// and threads `useNiatoSession` with on-turn JSONL persistence.
 //
 // JSONL persistence rules:
 //   • A fresh session (`replayedTurns.length === 0`) writes a
@@ -44,7 +44,7 @@ export function Session({
   mode,
   sessionId,
   sessionsDir,
-  nawaituFactory,
+  niatoFactory,
   replayedTurns,
   onExit,
 }: SessionProps): React.ReactElement {
@@ -59,8 +59,8 @@ export function Session({
     }
   }, [sessionId, mode, companion.version, sessionsDir, replayedTurns.length]);
 
-  const session = useNawaituSession(
-    nawaituFactory,
+  const session = useNiatoSession(
+    niatoFactory,
     sessionId,
     (turn: TurnState): void => {
       if (turn.errorMessage !== undefined) {

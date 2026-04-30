@@ -1,6 +1,6 @@
 import * as readline from "node:readline";
 import { randomUUID } from "node:crypto";
-import { type Nawaitu } from "../core/compose.js";
+import { type Niato } from "../core/compose.js";
 import { type Companion } from "./companion-config.js";
 
 // Multi-turn chat loop. Persistent session across turns so cost ledger
@@ -12,7 +12,7 @@ import { type Companion } from "./companion-config.js";
 // after every response so the user has the same observability as the
 // TUI without any UI dependency.
 export function runChatRepl(
-  nawaitu: Nawaitu,
+  niato: Niato,
   companion: Companion,
 ): Promise<void> {
   const sessionId = randomUUID();
@@ -36,7 +36,7 @@ export function runChatRepl(
     rl.pause();
     void (async () => {
       try {
-        const turn = await nawaitu.run(trimmed, sessionId);
+        const turn = await niato.run(trimmed, sessionId);
         process.stdout.write(`\n${turn.result}\n`);
         const dispatched =
           turn.trace.plan.length > 0

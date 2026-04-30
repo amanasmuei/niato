@@ -9,7 +9,7 @@ import { z } from "zod";
 // In-process stub MCP server. Phase 4 ships canned, deterministic data so the
 // dispatch loop and hook gates can be exercised end-to-end without real
 // Zendesk / Stripe credentials. A production deployment swaps this out by
-// replacing `pack.mcpServers` with real server URLs in createNawaitu config.
+// replacing `pack.mcpServers` with real server URLs in createNiato config.
 //
 // Tool surface mirrors ARCHITECTURE.md §7.2:
 //   - lookup_ticket          → ticket_lookup specialist

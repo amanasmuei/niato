@@ -1,17 +1,17 @@
 import { describe, it, expect } from "vitest";
 import {
-  createNawaitu,
+  createNiato,
   genericPack,
   maxLengthValidator,
   promptInjectionValidator,
   stubClassifier,
-  NawaituInputRejectedError,
+  NiatoInputRejectedError,
   type Config,
 } from "../src/index.js";
 
 const fakeConfig: Config = {
   ANTHROPIC_API_KEY: "test-key-not-real",
-  NAWAITU_LOG_LEVEL: "error",
+  NIATO_LOG_LEVEL: "error",
 };
 
 describe("maxLengthValidator", () => {
@@ -76,16 +76,16 @@ describe("promptInjectionValidator", () => {
 });
 
 describe("compose runs validators before classification", () => {
-  it("throws NawaituInputRejectedError when a validator fails", async () => {
-    const nawaitu = createNawaitu({
+  it("throws NiatoInputRejectedError when a validator fails", async () => {
+    const niato = createNiato({
       packs: [genericPack],
       classifier: stubClassifier,
       config: fakeConfig,
       inputValidators: [maxLengthValidator(5)],
     });
 
-    await expect(nawaitu.run("this input is too long")).rejects.toThrow(
-      NawaituInputRejectedError,
+    await expect(niato.run("this input is too long")).rejects.toThrow(
+      NiatoInputRejectedError,
     );
   });
 
@@ -96,7 +96,7 @@ describe("compose runs validators before classification", () => {
       return ok ? ({ ok: true } as const) : ({ ok: false, reason: label } as const);
     };
 
-    const nawaitu = createNawaitu({
+    const niato = createNiato({
       packs: [genericPack],
       classifier: stubClassifier,
       config: fakeConfig,
@@ -107,13 +107,13 @@ describe("compose runs validators before classification", () => {
       ],
     });
 
-    await expect(nawaitu.run("hi")).rejects.toThrow(/second-fail/);
+    await expect(niato.run("hi")).rejects.toThrow(/second-fail/);
     expect(calls).toEqual(["first-pass", "second-fail"]);
   });
 
   it("the default validator allows reasonable inputs", () => {
     expect(() =>
-      createNawaitu({
+      createNiato({
         packs: [genericPack],
         classifier: stubClassifier,
         config: fakeConfig,

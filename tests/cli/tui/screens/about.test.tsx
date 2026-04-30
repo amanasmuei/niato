@@ -9,7 +9,7 @@ describe("About screen", () => {
       <About version="0.1.0" onBack={() => undefined} />,
     );
     const out = lastFrame() ?? "";
-    expect(out).toContain("Nawaitu");
+    expect(out).toContain("Niato");
     expect(out).toContain("0.1.0");
     expect(out).toMatch(/license/i);
   });

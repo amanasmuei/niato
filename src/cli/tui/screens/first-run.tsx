@@ -34,7 +34,7 @@ export function FirstRun({
   return (
     <Box flexDirection="column" paddingX={1}>
       <Text bold color="cyan">
-        Welcome to Nawaitu
+        Welcome to Niato
       </Text>
       <Text color="gray">First run — let&apos;s pick your auth path.</Text>
       <Box marginTop={1}>

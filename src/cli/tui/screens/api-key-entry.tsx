@@ -44,7 +44,7 @@ export function ApiKeyEntry({
         API key
       </Text>
       <Text color="gray">
-        Paste your ANTHROPIC_API_KEY (saved to ~/.nawaitu/auth.json,
+        Paste your ANTHROPIC_API_KEY (saved to ~/.niato/auth.json,
         chmod 600).
       </Text>
       <Box marginTop={1}>

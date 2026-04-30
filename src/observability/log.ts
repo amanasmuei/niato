@@ -22,7 +22,7 @@ export function createConsoleLogger(minLevel: LogLevel = "info"): Logger {
         msg: message,
         ...(fields ?? {}),
       };
-      const line = `[nawaitu] ${JSON.stringify(entry)}`;
+      const line = `[niato] ${JSON.stringify(entry)}`;
       if (level === "error") console.error(line);
       else if (level === "warn") console.warn(line);
       else console.log(line);

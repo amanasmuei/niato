@@ -1,8 +1,8 @@
-# Nawaitu
+# Niato
 
-> *Nawaitu* (نَوَيْتُ) — Arabic for *"I have intended"*. The formal declaration of intent before an act.
+> *Niato* — derived from *niat* (Malay/Indonesian for *"intention"*, from the Arabic root نِيَّة). The formal declaration of intent before an act.
 
-**Nawaitu is an intent-routing agent built on the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview).** A Haiku classifier states the user's intent, an Opus orchestrator declares a plan, and the right specialist subagent — drawn from a pluggable *Domain Pack* — carries it out.
+**Niato is an intent-routing agent built on the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview).** A Haiku classifier states the user's intent, an Opus orchestrator declares a plan, and the right specialist subagent — drawn from a pluggable *Domain Pack* — carries it out.
 
 The architecture is a series of declarations before actions: **classify, plan, gate, act**. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the full design.
 
@@ -24,13 +24,13 @@ The architecture is a series of declarations before actions: **classify, plan, g
 Requires Node 20.6+. Install globally via npm:
 
 ```bash
-npm i -g nawaitu
+npm i -g niato
 ```
 
 Or run without installing:
 
 ```bash
-npx nawaitu
+npx niato
 ```
 
 **Authenticate.** Pick one and set it in your shell:
@@ -40,21 +40,21 @@ npx nawaitu
 export ANTHROPIC_API_KEY=sk-ant-...
 
 # OR — Claude subscription path (review ToS notes below before non-personal use)
-export NAWAITU_AUTH=subscription   # then run: claude /login (one-time)
+export NIATO_AUTH=subscription   # then run: claude /login (one-time)
 ```
 
 Then:
 
 ```bash
-nawaitu          # launches the TUI
-nawaitu --help   # subcommands: tui, chat, login
+niato          # launches the TUI
+niato --help   # subcommands: tui, chat, login
 ```
 
 **Develop locally** (clone-based — same as before):
 
 ```bash
 git clone <your-fork>
-cd nawaitu
+cd niato
 pnpm install
 cp .env.example .env       # fill in ANTHROPIC_API_KEY
 pnpm typecheck && pnpm lint && pnpm test
@@ -65,21 +65,21 @@ You'll see a structured `turn` log line (classification, dispatched specialist, 
 
 ## TUI (end-user terminal app)
 
-Nawaitu ships with a polished terminal UI for end-user use. After installing
+Niato ships with a polished terminal UI for end-user use. After installing
 globally:
 
 ```bash
 pnpm link
-nawaitu          # launches the TUI
-nawaitu login    # OAuth subscription auth (wraps `claude /login`)
-nawaitu chat     # legacy multi-turn REPL (kept for backwards compat)
+niato          # launches the TUI
+niato login    # OAuth subscription auth (wraps `claude /login`)
+niato chat     # legacy multi-turn REPL (kept for backwards compat)
 ```
 
 **First run** walks you through (all in-app, no shell setup needed):
 
 1. Auth pick — Claude subscription or API key.
-2. If API key: paste it in the in-app prompt (saved to `~/.nawaitu/auth.json`, chmod 600). The shell shortcut `ANTHROPIC_API_KEY` still works for power users.
-3. Companion setup — name, voice archetype, optional preferences (saved to `~/.nawaitu/companion.json`).
+2. If API key: paste it in the in-app prompt (saved to `~/.niato/auth.json`, chmod 600). The shell shortcut `ANTHROPIC_API_KEY` still works for power users.
+3. Companion setup — name, voice archetype, optional preferences (saved to `~/.niato/companion.json`).
 
 The `pnpm chat` standalone REPL stays for legacy/dev use, but isn't required for first-run anymore.
 
@@ -88,7 +88,7 @@ The `pnpm chat` standalone REPL stays for legacy/dev use, but isn't required for
 - A launcher with **New session**, **Resume last**, **Settings**, **About**.
 - Per-session mode pick (casual / dev) — same engine, different observability density.
 - Always-visible thin footer showing classify/dispatch ticks, latency, cost.
-- Sessions persisted as JSONL at `~/.nawaitu/sessions/{id}.jsonl` (last 50 retained).
+- Sessions persisted as JSONL at `~/.niato/sessions/{id}.jsonl` (last 50 retained).
 
 **Headless paths still work:** `echo "hi" | pnpm dev` and `pnpm dev "hi"` remain
 unchanged for scripting.
@@ -122,7 +122,7 @@ The cross-pack examples each dispatch more than one specialist in the same turn.
 
 ### Have a multi-turn chat with your companion
 
-`pnpm chat` opens a persistent chat REPL with the persona of your choice. First run launches a guided setup wizard (companion name, your name, voice archetype, free-form description); the choice persists at `~/.nawaitu/companion.json` so subsequent runs drop straight into the chat.
+`pnpm chat` opens a persistent chat REPL with the persona of your choice. First run launches a guided setup wizard (companion name, your name, voice archetype, free-form description); the choice persists at `~/.niato/companion.json` so subsequent runs drop straight into the chat.
 
 ```bash
 $ pnpm chat
@@ -133,7 +133,7 @@ Address you as (your name, optional): Aman
 Voice [warm/direct/playful] (default: warm): warm
 Anything else (optional): Faith-aware, walks alongside not above.
 
-✓ Saved to ~/.nawaitu/companion.json
+✓ Saved to ~/.niato/companion.json
 
 Layla · session 8861e2 · ctrl-D to exit
 
@@ -147,15 +147,15 @@ Layla · session 8861e2 · ctrl-D to exit
 
 Same session ID across turns — the cost ledger and `SessionMetrics` aggregate naturally. Each turn is otherwise independent (no conversation memory yet — that's the Level 3 long-term-memory ask). Pass `--reset` to re-run the wizard.
 
-To get a global `nawaitu` command instead of `pnpm chat`, run `pnpm link` once from the repo root. After that:
+To get a global `niato` command instead of `pnpm chat`, run `pnpm link` once from the repo root. After that:
 
 ```bash
-nawaitu login   # one-time, OAuth via Claude Code
-nawaitu         # default subcommand: chat
-nawaitu chat    # explicit
+niato login   # one-time, OAuth via Claude Code
+niato         # default subcommand: chat
+niato chat    # explicit
 ```
 
-The `bin/nawaitu` dispatcher forwards subcommands through to the matching `pnpm` script, so `nawaitu chat --reset` works the same as `pnpm chat --reset`. To launch as `arienz` instead, add a shell alias: `alias arienz='nawaitu'`.
+The `bin/niato` dispatcher forwards subcommands through to the matching `pnpm` script, so `niato chat --reset` works the same as `pnpm chat --reset`. To launch as `arienz` instead, add a shell alias: `alias arienz='niato'`.
 
 ### Watch a turn unfold in a TUI
 
@@ -177,18 +177,18 @@ Failures print the input, expected `(domain, intent)`, and what the classifier a
 
 ## Embed in your own code
 
-The package exports `createNawaitu(...)` as the entry-point factory:
+The package exports `createNiato(...)` as the entry-point factory:
 
 ```ts
 import {
-  createNawaitu,
+  createNiato,
   genericPack,
   supportPack,
   promptInjectionValidator,
   maxLengthValidator,
-} from "nawaitu";
+} from "niato";
 
-const nawaitu = createNawaitu({
+const niato = createNiato({
   packs: [genericPack, supportPack],
   inputValidators: [maxLengthValidator(8_000), promptInjectionValidator()],
   costLimitUsd: 1.0,         // reject further turns once the session has spent $1
@@ -210,21 +210,21 @@ const nawaitu = createNawaitu({
   },
 });
 
-const turn = await nawaitu.run("Please refund $15 on order ORD-99 — wrong size.");
+const turn = await niato.run("Please refund $15 on order ORD-99 — wrong size.");
 console.log(turn.result);
 console.log(turn.trace);     // TurnRecord — see "Tracing" below
 
 // Rolling per-session aggregates (turn count, cumulative cost / latency,
 // guardrail-trigger counts, dispatch counts, error count).
-console.log(nawaitu.metrics(turn.session.id));
+console.log(niato.metrics(turn.session.id));
 ```
 
 `run()` is async, isolated per session, and propagates two typed errors callers can render directly:
 
 | Error | Thrown when | Carries |
 | ----- | ----------- | ------- |
-| `NawaituInputRejectedError` | An input validator rejects the message | `reason: string` |
-| `NawaituBudgetExceededError` | `session.cumulativeCostUsd` already met or exceeded `costLimitUsd` | `cumulativeUsd`, `limitUsd` |
+| `NiatoInputRejectedError` | An input validator rejects the message | `reason: string` |
+| `NiatoBudgetExceededError` | `session.cumulativeCostUsd` already met or exceeded `costLimitUsd` | `cumulativeUsd`, `limitUsd` |
 
 ## Domain packs
 
@@ -240,7 +240,7 @@ Adding your own pack: create `src/packs/<name>/{pack.ts, agents/, prompts/, eval
 
 ### Persona (Level 1)
 
-`persona?: { name?, description }` on `NawaituOptions` adds a configurable user-facing identity layer. The text is prepended to the orchestrator's system prompt — the orchestrator becomes the persona; specialists stay role-focused tools the persona uses. Pack brand voice (already in each specialist's `prompt.md`) keeps working unchanged.
+`persona?: { name?, description }` on `NiatoOptions` adds a configurable user-facing identity layer. The text is prepended to the orchestrator's system prompt — the orchestrator becomes the persona; specialists stay role-focused tools the persona uses. Pack brand voice (already in each specialist's `prompt.md`) keeps working unchanged.
 
 ```ts
 persona: {
@@ -265,7 +265,7 @@ After every specialist returns, the orchestrator synthesizes a single answer tha
 
 Every meaningful action is preceded by a stated intent:
 
-1. **Input validators** run synchronously over the raw message (`maxLength` on by default, `promptInjection` opt-in). First failure throws `NawaituInputRejectedError` before any tokens are spent.
+1. **Input validators** run synchronously over the raw message (`maxLength` on by default, `promptInjection` opt-in). First failure throws `NiatoInputRejectedError` before any tokens are spent.
 2. **Cost-limit gate** checks `session.cumulativeCostUsd ≥ costLimitUsd`. Pre-turn — never mid-turn.
 3. **Classifier** (Sonnet 4.6 via the Agent SDK) returns `{ intent, domain, confidence }` against the loaded packs' vocabulary. Same SDK as the orchestrator, so OAuth subscription auth Just Works.
 4. **Orchestrator** (Opus 4.7) reads the classification, picks the pack from `domain`, calls `pack.route(intent)` to pick the specialist, and dispatches via the SDK's `Agent` tool.
@@ -284,15 +284,15 @@ Three layers, run in this order. The first failure short-circuits the rest:
 
 | Layer | Where it runs | Failure mode |
 | ----- | ------------- | ------------ |
-| Input validators | Before classification | `NawaituInputRejectedError` |
-| Cost-limit gate | Before classification | `NawaituBudgetExceededError` |
+| Input validators | Before classification | `NiatoInputRejectedError` |
+| Cost-limit gate | Before classification | `NiatoBudgetExceededError` |
 | SDK hooks | Around tool calls (built-in invariants → `globalHooks` → pack hooks) | SDK permission deny with reason text |
 
 Hooks are *enforcement*, not logging. The first hook to deny halts the SDK's permission flow before the tool runs. `agentOnlyOrchestratorHook` and `mergeHooks(...layers)` are exported so you can reuse them in custom configurations.
 
 ## Tracing
 
-Each call to `nawaitu.run()` returns a `TurnRecord` (also logged at `info`):
+Each call to `niato.run()` returns a `TurnRecord` (also logged at `info`):
 
 ```ts
 interface TurnRecord {
@@ -323,14 +323,14 @@ Two paths into the Anthropic API; pick whichever matches your setup. Both flow t
 | Path | Trigger | Cost | Use case |
 | ---- | ------- | ---- | -------- |
 | **API key** (default) | `ANTHROPIC_API_KEY=sk-ant-...` | per-token against your API budget | Production, CI, multi-user, anywhere a developer API key is the right call |
-| **Subscription** (opt-in) | `NAWAITU_AUTH=subscription` + prior `claude /login` | $0 — runs against Claude Max quota | Personal, single-user, on your own machine. **Read the ToS note below.** |
-| **None** | neither set | n/a | `NawaituAuthError` thrown at startup with actionable message |
+| **Subscription** (opt-in) | `NIATO_AUTH=subscription` + prior `claude /login` | $0 — runs against Claude Max quota | Personal, single-user, on your own machine. **Read the ToS note below.** |
+| **None** | neither set | n/a | `NiatoAuthError` thrown at startup with actionable message |
 
-`createNawaitu()` logs the chosen path at startup (`auth mode: api_key` or `auth mode: oauth_subscription`). If both are configured, `NAWAITU_AUTH=subscription` wins — explicit subscription opt-in overrides the API key.
+`createNiato()` logs the chosen path at startup (`auth mode: api_key` or `auth mode: oauth_subscription`). If both are configured, `NIATO_AUTH=subscription` wins — explicit subscription opt-in overrides the API key.
 
 ### Note on subscription auth
 
-The Agent SDK supports OAuth (subscription) authentication, and Nawaitu can use it via `NAWAITU_AUTH=subscription`. This path is **opt-in only as of v0.2.0**: without that env var, Nawaitu uses the developer API path or fails clearly at startup. We made this change because:
+The Agent SDK supports OAuth (subscription) authentication, and Niato can use it via `NIATO_AUTH=subscription`. This path is **opt-in only as of v0.2.0**: without that env var, Niato uses the developer API path or fails clearly at startup. We made this change because:
 
 - The Agent SDK explicitly supports OAuth (`ApiKeySource = 'oauth'` in its types).
 - What's *not* explicit is whether Anthropic's Consumer Terms / Acceptable Use Policy permit using your Claude Max subscription to power applications other than Claude Code itself.
@@ -347,9 +347,9 @@ The authoritative sources are Anthropic's [Consumer Terms](https://www.anthropic
 
 Three layers, none of which require an external dependency:
 
-**Per-turn `TurnRecord`** — the single-turn shape above. Every `nawaitu.run()` returns it; the `info` log line includes it as a flat JSON object.
+**Per-turn `TurnRecord`** — the single-turn shape above. Every `niato.run()` returns it; the `info` log line includes it as a flat JSON object.
 
-**Per-session `SessionMetrics`** — rolling aggregates updated after each turn settles. Read with `nawaitu.metrics(sessionId)`:
+**Per-session `SessionMetrics`** — rolling aggregates updated after each turn settles. Read with `niato.metrics(sessionId)`:
 
 ```ts
 interface SessionMetrics {
@@ -417,13 +417,13 @@ The check is strict: any drop in `passed` count fails. Case-count changes (i.e. 
 | 4 | Support pack: 5 intents, 4 specialists, in-process MCP stub, PII + dollar-limit hooks, 25 evals, live smoke turns |
 | 5 | Dev Tools pack: 4 intents, 4 specialists, built-in tool surface, sandbox-bash + secrets-scan hooks, 25 evals, live smoke (deny-path asserted in message stream); shared `runPackEvals` helper extracted; Ink TUI driver (`pnpm dev:tui`) |
 | 6 | Cross-pack composition: `IntentResult.secondary` carries cross-pack triples; orchestrator surfaces `Additional recommendations:` with per-entry confidence; `pickAdditionalRecommendations` resolves them into `<pack>.<specialist>` keys; classifier multi-domain detection evals (≥7/8); cross-pack smoke asserts `bug_fixer → escalate` dispatch order. Live verification gated on the next budget reset. |
-| 7 | Observability: `guardrailsTriggered` wired from `SDKPermissionDenial`; per-session `SessionMetrics` aggregator; pluggable `onTurnComplete(trace)` callback; per-pack eval regression baselines (`--baseline` / `--write-baseline`); `nawaitu.metrics(sessionId)` lookup. |
+| 7 | Observability: `guardrailsTriggered` wired from `SDKPermissionDenial`; per-session `SessionMetrics` aggregator; pluggable `onTurnComplete(trace)` callback; per-pack eval regression baselines (`--baseline` / `--write-baseline`); `niato.metrics(sessionId)` lookup. |
 | 8 | Cleanup: consolidated session aggregates into `metrics` (dropped duplicate `cumulativeCostUsd` / `turnCount` fields). Level 1 persona: configurable user-facing identity prepended to the orchestrator's system prompt. |
-| 9 | OAuth subscription auth: classifier migrated from raw `@anthropic-ai/sdk` (API-key-only, Haiku) to `@anthropic-ai/claude-agent-sdk` (OAuth-capable, Sonnet 4.6). `ANTHROPIC_API_KEY` now optional; both paths flow through the SDK's auto-resolution. `pnpm chat` first-run wizard + persistent companion config at `~/.nawaitu/companion.json`. |
-| 10 | Release prep (v0.2.0): MIT license, NAWAITU_AUTH=subscription opt-in gate (closes ToS-uncertain default), package.json npm-publishable shape, Node-based bin dispatcher, README rewrite, ARCHITECTURE.md status fix. |
+| 9 | OAuth subscription auth: classifier migrated from raw `@anthropic-ai/sdk` (API-key-only, Haiku) to `@anthropic-ai/claude-agent-sdk` (OAuth-capable, Sonnet 4.6). `ANTHROPIC_API_KEY` now optional; both paths flow through the SDK's auto-resolution. `pnpm chat` first-run wizard + persistent companion config at `~/.niato/companion.json`. |
+| 10 | Release prep (v0.2.0): MIT license, NIATO_AUTH=subscription opt-in gate (closes ToS-uncertain default), package.json npm-publishable shape, Node-based bin dispatcher, README rewrite, ARCHITECTURE.md status fix. |
 | 11 | In-app onboarding (v0.3.0): ApiKeyEntry + CompanionWizard Ink screens replace v0.2's `pnpm chat` hand-off. Install-to-first-turn fully self-contained in the TUI. |
-| 12 | Conversation memory (v0.4.0): SDK sessionId/resume threading via SessionContext.started flag. Cross-turn coherence works in `nawaitu.run()` and the TUI's Resume Last path; the SDK persists transcripts at `~/.nawaitu/sdk-sessions`. |
-| 13 | v1.0.0: error UX (network/401/429/malformed messages friendly), TUI default packs reduced to Generic-only with `NAWAITU_PACKS` opt-in for Support/Dev Tools, full CHANGELOG. Eval baselines and `pr_creator` deferred to v1.x backlog. |
+| 12 | Conversation memory (v0.4.0): SDK sessionId/resume threading via SessionContext.started flag. Cross-turn coherence works in `niato.run()` and the TUI's Resume Last path; the SDK persists transcripts at `~/.niato/sdk-sessions`. |
+| 13 | v1.0.0: error UX (network/401/429/malformed messages friendly), TUI default packs reduced to Generic-only with `NIATO_PACKS` opt-in for Support/Dev Tools, full CHANGELOG. Eval baselines and `pr_creator` deferred to v1.x backlog. |
 
 Up next:
 

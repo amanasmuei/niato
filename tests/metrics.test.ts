@@ -4,7 +4,7 @@ import {
   updateSessionMetrics,
 } from "../src/observability/metrics.js";
 import {
-  createNawaitu,
+  createNiato,
   genericPack,
   stubClassifier,
   type Config,
@@ -13,7 +13,7 @@ import {
 
 const fakeConfig: Config = {
   ANTHROPIC_API_KEY: "test-key-not-real",
-  NAWAITU_LOG_LEVEL: "error",
+  NIATO_LOG_LEVEL: "error",
 };
 
 function fakeTrace(over: Partial<TurnRecord> = {}): TurnRecord {
@@ -111,14 +111,14 @@ describe("updateSessionMetrics", () => {
   });
 });
 
-describe("nawaitu.metrics()", () => {
+describe("niato.metrics()", () => {
   it("returns undefined for an unknown session id", () => {
-    const nawaitu = createNawaitu({
+    const niato = createNiato({
       packs: [genericPack],
       classifier: stubClassifier,
       config: fakeConfig,
     });
-    expect(nawaitu.metrics("never-existed")).toBeUndefined();
+    expect(niato.metrics("never-existed")).toBeUndefined();
   });
 
   it("returns a structuredClone — caller mutations do not corrupt the live ledger", () => {

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import React from "react";
 import { render } from "ink-testing-library";
 import { ChatScrollback } from "../../../../src/cli/tui/components/chat-scrollback.js";
-import { type TurnState } from "../../../../src/cli/tui/hooks/use-nawaitu-session.js";
+import { type TurnState } from "../../../../src/cli/tui/hooks/use-niato-session.js";
 
 const turn = (input: string, output?: string): TurnState => ({
   input,

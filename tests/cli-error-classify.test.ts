@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { classifyError } from "../src/cli/error-classify.js";
-import { NawaituAuthError } from "../src/core/errors.js";
+import { NiatoAuthError } from "../src/core/errors.js";
 
 describe("classifyError", () => {
   it("returns null for unrecognized errors", () => {
@@ -10,8 +10,8 @@ describe("classifyError", () => {
     expect(classifyError(null)).toBeNull();
   });
 
-  it("classifies a NawaituAuthError as auth", () => {
-    const result = classifyError(new NawaituAuthError("No auth configured"));
+  it("classifies a NiatoAuthError as auth", () => {
+    const result = classifyError(new NiatoAuthError("No auth configured"));
     expect(result).not.toBeNull();
     expect(result?.kind).toBe("auth");
     expect(result?.message).toContain("No auth configured");

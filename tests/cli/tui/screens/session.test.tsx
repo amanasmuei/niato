@@ -6,8 +6,8 @@ import React from "react";
 import { render } from "ink-testing-library";
 import { Session } from "../../../../src/cli/tui/screens/session.js";
 import { type Companion } from "../../../../src/cli/companion-config.js";
-import { type TurnState } from "../../../../src/cli/tui/hooks/use-nawaitu-session.js";
-import { makeStubNawaitu } from "../_helpers/stub-nawaitu.js";
+import { type TurnState } from "../../../../src/cli/tui/hooks/use-niato-session.js";
+import { makeStubNiato } from "../_helpers/stub-niato.js";
 
 const companion: Companion = {
   version: 1,
@@ -19,7 +19,7 @@ const companion: Companion = {
 describe("Session screen", () => {
   let dir: string;
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "nawaitu-session-"));
+    dir = mkdtempSync(join(tmpdir(), "niato-session-"));
   });
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
@@ -32,7 +32,7 @@ describe("Session screen", () => {
         mode="casual"
         sessionId="ses-1"
         sessionsDir={dir}
-        nawaituFactory={() => makeStubNawaitu([{ output: "hi back" }])}
+        niatoFactory={() => makeStubNiato([{ output: "hi back" }])}
         replayedTurns={[]}
         onExit={() => undefined}
       />,
@@ -53,7 +53,7 @@ describe("Session screen", () => {
         mode="casual"
         sessionId="ses-1"
         sessionsDir={dir}
-        nawaituFactory={() => makeStubNawaitu([{ output: "hi back" }])}
+        niatoFactory={() => makeStubNiato([{ output: "hi back" }])}
         replayedTurns={[]}
         onExit={() => undefined}
       />,
@@ -74,8 +74,8 @@ describe("Session screen", () => {
         mode="casual"
         sessionId="ses-err"
         sessionsDir={dir}
-        nawaituFactory={() =>
-          makeStubNawaitu([{ output: "", throws: new Error("boom") }])
+        niatoFactory={() =>
+          makeStubNiato([{ output: "", throws: new Error("boom") }])
         }
         replayedTurns={[]}
         onExit={() => undefined}
@@ -92,8 +92,8 @@ describe("Session screen", () => {
         mode="casual"
         sessionId="ses-err"
         sessionsDir={dir}
-        nawaituFactory={() =>
-          makeStubNawaitu([{ output: "", throws: new Error("boom") }])
+        niatoFactory={() =>
+          makeStubNiato([{ output: "", throws: new Error("boom") }])
         }
         replayedTurns={[]}
         onExit={() => undefined}
@@ -130,7 +130,7 @@ describe("Session screen", () => {
         mode="casual"
         sessionId="ses-2"
         sessionsDir={dir}
-        nawaituFactory={() => makeStubNawaitu([])}
+        niatoFactory={() => makeStubNiato([])}
         replayedTurns={replayed}
         onExit={() => undefined}
       />,

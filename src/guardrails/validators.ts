@@ -1,6 +1,6 @@
 // Synchronous predicate over the raw user input, run by compose.run()
 // before classification. Returning `{ok: false, reason}` aborts the turn
-// with a NawaituInputRejectedError; returning `{ok: true}` lets the next
+// with a NiatoInputRejectedError; returning `{ok: true}` lets the next
 // validator run.
 export type InputValidatorResult =
   | { ok: true }

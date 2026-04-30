@@ -10,7 +10,7 @@ import { FirstRun } from "./screens/first-run.js";
 import { ApiKeyEntry } from "./screens/api-key-entry.js";
 import { CompanionWizard } from "./screens/companion-wizard.js";
 import { Menu } from "./components/menu.js";
-import { type TurnState } from "./hooks/use-nawaitu-session.js";
+import { type TurnState } from "./hooks/use-niato-session.js";
 import {
   loadCompanion,
   defaultCompanionPath,
@@ -29,14 +29,14 @@ import {
   pruneSessions,
   type SessionMode,
 } from "./store/sessions.js";
-import { type Nawaitu } from "../../core/compose.js";
+import { type Niato } from "../../core/compose.js";
 import { type Logger } from "../../observability/log.js";
 
 export interface AppProps {
   companionPath?: string;
   sessionsDir?: string;
   authPath?: string;
-  nawaituFactory: (logger: Logger) => Nawaitu;
+  niatoFactory: (logger: Logger) => Niato;
   version: string;
 }
 
@@ -87,7 +87,7 @@ export function App({
   companionPath = defaultCompanionPath(),
   sessionsDir = defaultSessionsDir(),
   authPath = defaultAuthPath(),
-  nawaituFactory,
+  niatoFactory,
   version,
 }: AppProps): React.ReactElement {
   const { exit } = useApp();
@@ -280,7 +280,7 @@ export function App({
           mode={props.mode}
           sessionId={props.sessionId}
           sessionsDir={sessionsDir}
-          nawaituFactory={nawaituFactory}
+          niatoFactory={niatoFactory}
           replayedTurns={props.replayedTurns}
           onExit={stack.pop}
         />

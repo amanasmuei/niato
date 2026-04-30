@@ -1,6 +1,6 @@
 import {
-  type Nawaitu,
-  type NawaituTurn,
+  type Niato,
+  type NiatoTurn,
 } from "../../../../src/core/compose.js";
 import {
   emptySessionMetrics,
@@ -14,7 +14,7 @@ export interface StubResponse {
   throws?: Error;
 }
 
-// Test double for Nawaitu used by hook + screen tests. Pops canned responses
+// Test double for Niato used by hook + screen tests. Pops canned responses
 // in order; falls back to a synthetic "no canned response" string so a test
 // over-running its fixture fails loudly instead of returning undefined.
 //
@@ -25,11 +25,11 @@ export interface StubResponse {
 //     is a required field, not optional.
 //   • SessionMetrics requires dispatchesByPackSpecialist alongside the
 //     fields the plan's literal stub listed.
-//   • Nawaitu.metrics takes a sessionId arg (plan literal had zero args).
-export function makeStubNawaitu(responses: StubResponse[]): Nawaitu {
+//   • Niato.metrics takes a sessionId arg (plan literal had zero args).
+export function makeStubNiato(responses: StubResponse[]): Niato {
   let i = 0;
   return {
-    async run(input, sessionId): Promise<NawaituTurn> {
+    async run(input, sessionId): Promise<NiatoTurn> {
       const r = responses[i++] ?? {
         output: `(no canned response for: ${input})`,
       };

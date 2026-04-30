@@ -9,12 +9,12 @@
 
 ## Goal
 
-Ship a polished, public-facing terminal UI for Nawaitu that serves **both** developer
+Ship a polished, public-facing terminal UI for Niato that serves **both** developer
 workflows (building/inspecting intent-routing agents) and personal-companion
 workflows (chatting with a faith-aware AI partner) — in one cohesive app, with mode
 selected per session.
 
-The TUI must surface Nawaitu's "declare before act" philosophy as a first-class UI
+The TUI must surface Niato's "declare before act" philosophy as a first-class UI
 property: classification, dispatch, and cost are visible by default, never hidden.
 
 ## Non-goals (v1)
@@ -49,8 +49,8 @@ launcher is mode-agnostic.
 | Q3 | Launcher scope | **Lean** — New session · Resume last · Settings · About |
 | Q4 | Session layout | **Chat + thin always-visible footer** |
 | Q5 | Auth | OAuth (Claude subscription, recommended) **or** API key |
-| Q5 | Install | `npm i -g nawaitu` (v1); single-binary + Homebrew in v1.1 |
-| Q5 | Persistence | JSONL session files at `~/.nawaitu/sessions/{id}.jsonl`, last 50 retained |
+| Q5 | Install | `npm i -g niato` (v1); single-binary + Homebrew in v1.1 |
+| Q5 | Persistence | JSONL session files at `~/.niato/sessions/{id}.jsonl`, last 50 retained |
 
 ---
 
@@ -71,11 +71,11 @@ new `session.tsx` screen).
 
 ### Entry-point routing
 
-`bin/nawaitu` decides between TUI and headless modes:
+`bin/niato` decides between TUI and headless modes:
 
 - **Interactive TTY + no positional args** → launches TUI (`src/cli/tui/index.tsx`).
 - **Args provided OR stdin piped** → falls through to existing single-shot
-  `cli.ts` behavior. `echo "hi" | nawaitu` and `nawaitu "hi"` keep working.
+  `cli.ts` behavior. `echo "hi" | niato` and `niato "hi"` keep working.
 
 This preserves scripting use cases and avoids breaking anyone already piping
 into the binary.
@@ -118,11 +118,11 @@ src/cli/tui/
     text-input.tsx          controlled input (Ink ref pattern)
   store/
     sessions.ts             JSONL read/write/list/prune
-    auth.ts                 env > ~/.nawaitu/auth.json > prompt resolution
+    auth.ts                 env > ~/.niato/auth.json > prompt resolution
     companion.ts            wraps existing src/cli/companion-config.ts
   hooks/
     use-screen-stack.ts
-    use-nawaitu-session.ts  exposes run(), phase state, last trace
+    use-niato-session.ts  exposes run(), phase state, last trace
 ```
 
 ### Screen contracts
@@ -131,13 +131,13 @@ src/cli/tui/
 |--------|--------|----------|-------|
 | `first-run` | none | Auth (oauth/api-key) → companion wizard → save config | `replace(launcher)` on success |
 | `launcher` | companion | Vertical menu; "Resume last" disabled when no sessions exist | `push(session\|settings\|about)` or quit |
-| `session` | `{ mode, sessionId, replayedTurns? }` | Chat + footer; streams `nawaitu.run()` per turn; appends to JSONL | `pop()` to launcher on Esc/Ctrl-D |
+| `session` | `{ mode, sessionId, replayedTurns? }` | Chat + footer; streams `niato.run()` per turn; appends to JSONL | `pop()` to launcher on Esc/Ctrl-D |
 | `settings` | companion | Edit companion / auth / pinned packs | `pop()` |
 | `about` | none | Version, license, links | `pop()` |
 
 ### Reused vs new
 
-- **Reused:** `core/compose.ts` (`createNawaitu`), `cli/companion-config.ts`,
+- **Reused:** `core/compose.ts` (`createNiato`), `cli/companion-config.ts`,
   `cli/persona-builder.ts`, `cli/setup-wizard.ts` (its prompts can be invoked
   from `first-run.tsx`), all packs, all observability primitives.
 - **Extracted from `cli-tui.tsx`:** `PhaseLine`, `TokenPanel`,
@@ -152,7 +152,7 @@ src/cli/tui/
 ### Cold start
 
 ```
-bin/nawaitu → src/cli/tui/index.tsx → load ~/.nawaitu/companion.json
+bin/niato → src/cli/tui/index.tsx → load ~/.niato/companion.json
   ├── missing  → screen-stack: [first-run]
   └── present  → screen-stack: [launcher]
 ```
@@ -166,7 +166,7 @@ first-run
   │     │     (reuses cli-login.ts logic; surfaces ToS uncertainty per
   │     │     commit 577d53f)
   │     └── "API key" → reads ANTHROPIC_API_KEY or prompts; saves to
-  │           ~/.nawaitu/auth.json (chmod 600)
+  │           ~/.niato/auth.json (chmod 600)
   ├── step 2: companion wizard (existing 4 questions, reused)
   └── save → replace stack with [launcher]
 ```
@@ -178,9 +178,9 @@ launcher → "New session"
   ├── 2-second mode prompt: "Mode? [c]asual / [d]ev (default casual)"
   ├── push session screen with { mode, sessionId: randomUUID() }
   ├── per turn:
-  │     ├── nawaitu.run(input, sessionId)
+  │     ├── niato.run(input, sessionId)
   │     ├── tuiLogger updates footer phase ticks
-  │     └── on done: append to ~/.nawaitu/sessions/{id}.jsonl
+  │     └── on done: append to ~/.niato/sessions/{id}.jsonl
   └── on exit (Esc/Ctrl-D): pop to launcher
 ```
 
@@ -196,7 +196,7 @@ launcher → "Resume last"
 
 ### Persistence schema
 
-`~/.nawaitu/sessions/{sessionId}.jsonl` — one JSON object per line:
+`~/.niato/sessions/{sessionId}.jsonl` — one JSON object per line:
 
 ```jsonl
 {"v":1,"type":"session-start","mode":"casual","createdAt":"2026-04-28T13:53:00Z","companionVersion":1}
@@ -232,7 +232,7 @@ load, prune to the most recent 50 files by mtime.
 - **`ink-testing-library`** — added as the single new dev dependency. Powers
   snapshot-style screen tests.
 - **Vitest** (already configured) runs the suite; no new test runner.
-- **No real Anthropic API in tests.** Stub `Nawaitu` is constructed with canned
+- **No real Anthropic API in tests.** Stub `Niato` is constructed with canned
   turn outputs (same pattern existing tests use).
 
 ### Test plan
@@ -243,7 +243,7 @@ load, prune to the most recent 50 files by mtime.
 | Screen | Each screen renders correctly given props; menu navigation; mode-prompt parsing | `tests/cli/tui/screens/` |
 | Store | `sessions.ts` round-trips, prunes correctly, handles corrupt files | `tests/cli/tui/store/` |
 | Auth | env > file > prompt precedence; chmod 600 verified | `tests/cli/tui/store/` |
-| End-to-end smoke | Spawn TUI with stub Nawaitu, drive via stdin, assert final scrollback + JSONL output | `tests/cli/tui-smoke.test.ts` |
+| End-to-end smoke | Spawn TUI with stub Niato, drive via stdin, assert final scrollback + JSONL output | `tests/cli/tui-smoke.test.ts` |
 
 ### Coverage target
 
@@ -253,7 +253,7 @@ exercises the full first-run → new-session → resume-last loop.
 
 ### Eval impact
 
-Zero. Pack evals exercise `createNawaitu()` programmatically and never go
+Zero. Pack evals exercise `createNiato()` programmatically and never go
 through the TUI.
 
 ---
@@ -268,7 +268,7 @@ These are not blockers — the implementation plan can resolve them:
    not block the UI. Probably load lazily into scrollback as user scrolls up.
 3. **Settings live-editing.** Does changing voice mid-session take effect on
    the next turn, or only on new sessions? v1 leaning: next session only.
-4. **Session lock files.** If two `nawaitu` instances run simultaneously and
+4. **Session lock files.** If two `niato` instances run simultaneously and
    both pick "Resume last", do they share the JSONL? v1: simple last-writer-wins;
    document the limitation.
 
@@ -289,12 +289,12 @@ These are not blockers — the implementation plan can resolve them:
 
 ## Acceptance criteria for v1 ship
 
-- `nawaitu` (no args, TTY) launches into the TUI.
+- `niato` (no args, TTY) launches into the TUI.
 - First-run flow completes in under 2 minutes for both auth paths.
 - New session → casual mode shows thin footer; dev mode shows expanded footer.
 - Resume last successfully restores a 20-turn session within 1 second.
 - All five test layers pass; no real API hits in tests.
-- `bin/nawaitu` headless paths (`echo ... | nawaitu`, `nawaitu "..."`) still
+- `bin/niato` headless paths (`echo ... | niato`, `niato "..."`) still
   work identically to today.
 - First public npm publish (version per semver — implementation plan to decide;
   current `0.1.0` in `package.json` reflects pre-public dev state).

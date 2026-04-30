@@ -1,8 +1,8 @@
-export { createNawaitu } from "./core/compose.js";
+export { createNiato } from "./core/compose.js";
 export type {
-  Nawaitu,
-  NawaituOptions,
-  NawaituTurn,
+  Niato,
+  NiatoOptions,
+  NiatoTurn,
 } from "./core/compose.js";
 
 export { genericPack } from "./packs/generic/index.js";
@@ -26,10 +26,10 @@ export {
   promptInjectionValidator,
 } from "./guardrails/validators.js";
 export {
-  NawaituInputRejectedError,
-  NawaituBudgetExceededError,
+  NiatoInputRejectedError,
+  NiatoBudgetExceededError,
 } from "./guardrails/errors.js";
-export { NawaituAuthError } from "./core/errors.js";
+export { NiatoAuthError } from "./core/errors.js";
 export { classifyError } from "./cli/error-classify.js";
 export type {
   ClassifiedError,

@@ -14,7 +14,7 @@ export function About({ version, onBack }: AboutProps): React.ReactElement {
   return (
     <Box flexDirection="column" paddingX={1}>
       <Text bold color="cyan">
-        Nawaitu
+        Niato
       </Text>
       <Text color="gray">{`version ${version}`}</Text>
       <Box marginTop={1}>

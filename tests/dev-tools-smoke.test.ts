@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  createNawaitu,
+  createNiato,
   devToolsPack,
   extractAgentDispatches,
 } from "../src/index.js";
@@ -25,8 +25,8 @@ function messageStreamContains(
 
 describe.skipIf(!hasKey)("smoke: Dev Tools pack end-to-end", () => {
   it("dispatches dev_tools.codebase_search for a find_code query", async () => {
-    const nawaitu = createNawaitu({ packs: [devToolsPack] });
-    const turn = await nawaitu.run(
+    const niato = createNiato({ packs: [devToolsPack] });
+    const turn = await niato.run(
       "Where is the agentOnlyOrchestratorHook defined?",
     );
 
@@ -38,8 +38,8 @@ describe.skipIf(!hasKey)("smoke: Dev Tools pack end-to-end", () => {
   }, 240_000);
 
   it("dispatches dev_tools.code_explainer for an explain_code query", async () => {
-    const nawaitu = createNawaitu({ packs: [devToolsPack] });
-    const turn = await nawaitu.run(
+    const niato = createNiato({ packs: [devToolsPack] });
+    const turn = await niato.run(
       "Explain what agentOnlyOrchestratorHook does in src/guardrails/orchestrator-enforcement.ts.",
     );
 
@@ -50,8 +50,8 @@ describe.skipIf(!hasKey)("smoke: Dev Tools pack end-to-end", () => {
   }, 240_000);
 
   it("denies a non-allowlist Bash command via sandboxBashHook and surfaces the reason", async () => {
-    const nawaitu = createNawaitu({ packs: [devToolsPack] });
-    const turn = await nawaitu.run(
+    const niato = createNiato({ packs: [devToolsPack] });
+    const turn = await niato.run(
       "There's a bug somewhere in src/index.ts that's causing build failures. Investigate by running `git log -3 --oneline` to see recent commits, then read the file and propose a one-line fix.",
     );
 

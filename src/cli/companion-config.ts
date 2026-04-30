@@ -8,7 +8,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { z } from "zod";
 
-// Persisted companion configuration. Lives at ~/.nawaitu/companion.json by
+// Persisted companion configuration. Lives at ~/.niato/companion.json by
 // default; the chat CLI loads it on every run, falling back to the setup
 // wizard when missing or invalid. The shape is versioned so future
 // migrations (richer voice options, per-tool persona overrides, etc.)
@@ -29,7 +29,7 @@ export const CompanionSchema = z.object({
 export type Companion = z.infer<typeof CompanionSchema>;
 
 export function defaultCompanionPath(): string {
-  return join(homedir(), ".nawaitu", "companion.json");
+  return join(homedir(), ".niato", "companion.json");
 }
 
 // Returns null on missing file OR malformed file. The wizard handles

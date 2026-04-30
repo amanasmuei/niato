@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a public-release Ink TUI for Nawaitu that serves both developer and companion-style end users in one cohesive app, with mode picked per-session and full observability surfaced via a thin always-visible footer.
+**Goal:** Build a public-release Ink TUI for Niato that serves both developer and companion-style end users in one cohesive app, with mode picked per-session and full observability surfaced via a thin always-visible footer.
 
-**Architecture:** Screen-per-file Ink app under `src/cli/tui/`, with a tiny custom screen-stack hook for navigation, JSONL session persistence at `~/.nawaitu/sessions/`, and a TTY-aware shell entry point. Existing single-shot CLI entries (`pnpm dev`, `pnpm chat`, `pnpm dev:tui`) remain functional during transition.
+**Architecture:** Screen-per-file Ink app under `src/cli/tui/`, with a tiny custom screen-stack hook for navigation, JSONL session persistence at `~/.niato/sessions/`, and a TTY-aware shell entry point. Existing single-shot CLI entries (`pnpm dev`, `pnpm chat`, `pnpm dev:tui`) remain functional during transition.
 
 **Tech Stack:** TypeScript strict mode · React 19 · Ink 7 · ink-spinner · ink-testing-library (new dev-dep) · vitest · Node 20+.
 
@@ -16,15 +16,15 @@
 
 1. **Worktree (recommended).** Run from a fresh worktree to keep master clean:
    ```bash
-   git worktree add ../nawaitu-tui -b feat/end-user-tui
-   cd ../nawaitu-tui
+   git worktree add ../niato-tui -b feat/end-user-tui
+   cd ../niato-tui
    ```
 2. **Two spec divergences from the original design — both intentional and noted in the plan:**
    - `store/companion.ts` is dropped (YAGNI). Screens import `cli/companion-config.ts` directly. Saves a layer of pure indirection.
-   - `bin/nawaitu`'s default subcommand changes from `chat` to a new `tui` script. `nawaitu chat` still works (legacy REPL stays addressable). Documented in Task 19.
+   - `bin/niato`'s default subcommand changes from `chat` to a new `tui` script. `niato chat` still works (legacy REPL stays addressable). Documented in Task 19.
 3. **TDD discipline.** Every behavior task: write failing test → run → verify failure → implement → run → verify pass → commit. Don't skip the failing-test step.
 4. **Commit cadence.** One commit per task. Use the commit messages provided.
-5. **No real Anthropic API in tests.** Use the `StubNawaitu` helper from Task 5.
+5. **No real Anthropic API in tests.** Use the `StubNiato` helper from Task 5.
 
 ---
 
@@ -52,18 +52,18 @@ src/cli/tui/
     auth.ts                       Task 3
   hooks/
     use-screen-stack.ts           Task 4
-    use-nawaitu-session.ts        Task 5
+    use-niato-session.ts        Task 5
 tests/cli/tui/
   store/sessions.test.ts          Task 2
   store/auth.test.ts              Task 3
   hooks/use-screen-stack.test.tsx Task 4
-  hooks/use-nawaitu-session.test.tsx Task 5
+  hooks/use-niato-session.test.tsx Task 5
   components/*.test.tsx           Tasks 6–11
   screens/*.test.tsx              Tasks 12–16
   app.test.tsx                    Task 17
 tests/cli/tui-smoke.test.ts       Task 20  · end-to-end
 package.json                      Tasks 1, 19
-bin/nawaitu                       Task 19
+bin/niato                       Task 19
 README.md                         Task 21
 src/cli-tui.tsx                   Tasks 8, 9   · update imports after extraction
 ```
@@ -147,7 +147,7 @@ const fakeTrace = (): TurnRecord => ({
 describe("session store", () => {
   let dir: string;
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "nawaitu-test-"));
+    dir = mkdtempSync(join(tmpdir(), "niato-test-"));
   });
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
@@ -247,7 +247,7 @@ export interface LoadedSession {
 }
 
 export function defaultSessionsDir(): string {
-  return join(homedir(), ".nawaitu", "sessions");
+  return join(homedir(), ".niato", "sessions");
 }
 
 function ensureDir(dir: string): void {
@@ -407,7 +407,7 @@ describe("auth store", () => {
   let originalEnv: string | undefined;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "nawaitu-auth-"));
+    dir = mkdtempSync(join(tmpdir(), "niato-auth-"));
     path = join(dir, "auth.json");
     originalEnv = process.env["ANTHROPIC_API_KEY"];
     delete process.env["ANTHROPIC_API_KEY"];
@@ -480,7 +480,7 @@ export interface AuthState {
 }
 
 export function defaultAuthPath(): string {
-  return join(homedir(), ".nawaitu", "auth.json");
+  return join(homedir(), ".niato", "auth.json");
 }
 
 export function loadAuth(path: string = defaultAuthPath()): AuthState | null {
@@ -532,7 +532,7 @@ Expected: PASS — all 5 tests green.
 
 ```bash
 git add src/cli/tui/store/auth.ts tests/cli/tui/store/auth.test.ts
-git commit -m "feat(tui): auth resolver — env > ~/.nawaitu/auth.json with chmod 600"
+git commit -m "feat(tui): auth resolver — env > ~/.niato/auth.json with chmod 600"
 ```
 
 ---
@@ -668,18 +668,18 @@ git commit -m "feat(tui): useScreenStack hook for in-app navigation"
 
 ---
 
-## Task 5: Nawaitu-session hook + StubNawaitu test helper (`hooks/use-nawaitu-session.ts`)
+## Task 5: Niato-session hook + StubNiato test helper (`hooks/use-niato-session.ts`)
 
 **Files:**
-- Create: `src/cli/tui/hooks/use-nawaitu-session.ts`
-- Create: `tests/cli/tui/_helpers/stub-nawaitu.ts`
-- Test: `tests/cli/tui/hooks/use-nawaitu-session.test.tsx`
+- Create: `src/cli/tui/hooks/use-niato-session.ts`
+- Create: `tests/cli/tui/_helpers/stub-niato.ts`
+- Test: `tests/cli/tui/hooks/use-niato-session.test.tsx`
 
-- [ ] **Step 1: Write the StubNawaitu helper (used by this and downstream tests)**
+- [ ] **Step 1: Write the StubNiato helper (used by this and downstream tests)**
 
 ```typescript
-// tests/cli/tui/_helpers/stub-nawaitu.ts
-import { type Nawaitu, type NawaituTurn } from "../../../../src/core/compose.js";
+// tests/cli/tui/_helpers/stub-niato.ts
+import { type Niato, type NiatoTurn } from "../../../../src/core/compose.js";
 import { type SessionMetrics } from "../../../../src/observability/metrics.js";
 
 export interface StubResponse {
@@ -688,10 +688,10 @@ export interface StubResponse {
   throws?: Error;
 }
 
-export function makeStubNawaitu(responses: StubResponse[]): Nawaitu {
+export function makeStubNiato(responses: StubResponse[]): Niato {
   let i = 0;
   return {
-    async run(input, sessionId): Promise<NawaituTurn> {
+    async run(input, sessionId): Promise<NiatoTurn> {
       const r = responses[i++] ?? { output: `(no canned response for: ${input})` };
       if (r.delayMs !== undefined) await new Promise((res) => setTimeout(res, r.delayMs));
       if (r.throws) throw r.throws;
@@ -726,27 +726,27 @@ export function makeStubNawaitu(responses: StubResponse[]): Nawaitu {
 - [ ] **Step 2: Write failing test**
 
 ```typescript
-// tests/cli/tui/hooks/use-nawaitu-session.test.tsx
+// tests/cli/tui/hooks/use-niato-session.test.tsx
 import { describe, it, expect } from "vitest";
 import React from "react";
 import { Text } from "ink";
 import { render } from "ink-testing-library";
-import { useNawaituSession, type SessionPhase } from "../../../../src/cli/tui/hooks/use-nawaitu-session.js";
-import { makeStubNawaitu } from "../_helpers/stub-nawaitu.js";
+import { useNiatoSession, type SessionPhase } from "../../../../src/cli/tui/hooks/use-niato-session.js";
+import { makeStubNiato } from "../_helpers/stub-niato.js";
 
 function Probe({
   capture,
 }: {
-  capture: (api: ReturnType<typeof useNawaituSession>) => void;
+  capture: (api: ReturnType<typeof useNiatoSession>) => void;
 }): React.ReactElement {
-  const api = useNawaituSession(() => makeStubNawaitu([{ output: "hi back" }, { output: "again" }]), "sess-1");
+  const api = useNiatoSession(() => makeStubNiato([{ output: "hi back" }, { output: "again" }]), "sess-1");
   React.useEffect(() => capture(api), [api]);
   return <Text>{api.phase}:{String(api.turns.length)}</Text>;
 }
 
-describe("useNawaituSession", () => {
+describe("useNiatoSession", () => {
   it("phase progresses idle → done after run()", async () => {
-    let last: ReturnType<typeof useNawaituSession> | undefined;
+    let last: ReturnType<typeof useNiatoSession> | undefined;
     const { lastFrame, rerender } = render(<Probe capture={(a) => { last = a; }} />);
     expect(lastFrame()).toContain("idle:0");
 
@@ -757,11 +757,11 @@ describe("useNawaituSession", () => {
     expect(last!.turns[0]!.output).toBe("hi back");
   });
 
-  it("captures error message when nawaitu throws", async () => {
-    let last: ReturnType<typeof useNawaituSession> | undefined;
+  it("captures error message when niato throws", async () => {
+    let last: ReturnType<typeof useNiatoSession> | undefined;
     function ErrProbe(): React.ReactElement {
-      const api = useNawaituSession(
-        () => makeStubNawaitu([{ output: "", throws: new Error("boom") }]),
+      const api = useNiatoSession(
+        () => makeStubNiato([{ output: "", throws: new Error("boom") }]),
         "sess-2",
       );
       React.useEffect(() => { last = api; }, [api]);
@@ -779,16 +779,16 @@ describe("useNawaituSession", () => {
 - [ ] **Step 3: Run, verify FAIL**
 
 ```bash
-pnpm test tests/cli/tui/hooks/use-nawaitu-session.test.tsx
+pnpm test tests/cli/tui/hooks/use-niato-session.test.tsx
 ```
 
 Expected: FAIL.
 
-- [ ] **Step 4: Implement `src/cli/tui/hooks/use-nawaitu-session.ts`**
+- [ ] **Step 4: Implement `src/cli/tui/hooks/use-niato-session.ts`**
 
 ```typescript
 import { useRef, useState } from "react";
-import { type Nawaitu, type NawaituTurn } from "../../../core/compose.js";
+import { type Niato, type NiatoTurn } from "../../../core/compose.js";
 import { type IntentResult } from "../../../core/classifier/types.js";
 import { type TurnRecord } from "../../../observability/trace.js";
 import { type Logger } from "../../../observability/log.js";
@@ -804,7 +804,7 @@ export interface TurnState {
   phase: SessionPhase;
 }
 
-export interface UseNawaitu {
+export interface UseNiato {
   phase: SessionPhase;
   classification?: IntentResult;
   trace?: TurnRecord;
@@ -812,18 +812,18 @@ export interface UseNawaitu {
   run: (input: string) => Promise<void>;
 }
 
-export function useNawaituSession(
-  factory: (logger: Logger) => Nawaitu,
+export function useNiatoSession(
+  factory: (logger: Logger) => Niato,
   sessionId: string,
   onTurnComplete?: (turn: TurnState) => void,
-): UseNawaitu {
+): UseNiato {
   const [phase, setPhase] = useState<SessionPhase>("idle");
   const [classification, setClassification] = useState<IntentResult | undefined>(undefined);
   const [trace, setTrace] = useState<TurnRecord | undefined>(undefined);
   const [turns, setTurns] = useState<TurnState[]>([]);
 
-  const nawaituRef = useRef<Nawaitu | null>(null);
-  if (nawaituRef.current === null) {
+  const niatoRef = useRef<Niato | null>(null);
+  if (niatoRef.current === null) {
     const logger: Logger = {
       log(_level, message, fields): void {
         if (message === "turn start") setPhase("classifying");
@@ -840,14 +840,14 @@ export function useNawaituSession(
         }
       },
     };
-    nawaituRef.current = factory(logger);
+    niatoRef.current = factory(logger);
   }
 
   async function run(input: string): Promise<void> {
     setPhase("classifying");
     setTurns((t) => [...t, { input, phase: "classifying" }]);
     try {
-      const turn: NawaituTurn = await nawaituRef.current!.run(input, sessionId);
+      const turn: NiatoTurn = await niatoRef.current!.run(input, sessionId);
       const next: TurnState = {
         input,
         output: turn.result,
@@ -876,7 +876,7 @@ export function useNawaituSession(
 - [ ] **Step 5: Run, verify PASS**
 
 ```bash
-pnpm test tests/cli/tui/hooks/use-nawaitu-session.test.tsx
+pnpm test tests/cli/tui/hooks/use-niato-session.test.tsx
 ```
 
 Expected: PASS — all 2 tests green.
@@ -884,8 +884,8 @@ Expected: PASS — all 2 tests green.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/cli/tui/hooks/use-nawaitu-session.ts tests/cli/tui/hooks/use-nawaitu-session.test.tsx tests/cli/tui/_helpers/stub-nawaitu.ts
-git commit -m "feat(tui): useNawaituSession hook + StubNawaitu test helper"
+git add src/cli/tui/hooks/use-niato-session.ts tests/cli/tui/hooks/use-niato-session.test.tsx tests/cli/tui/_helpers/stub-niato.ts
+git commit -m "feat(tui): useNiatoSession hook + StubNiato test helper"
 ```
 
 ---
@@ -1439,7 +1439,7 @@ import { Box, Text } from "ink";
 import Spinner from "ink-spinner";
 import { type IntentResult } from "../../../core/classifier/types.js";
 import { type TurnRecord } from "../../../observability/trace.js";
-import { type SessionPhase } from "../hooks/use-nawaitu-session.js";
+import { type SessionPhase } from "../hooks/use-niato-session.js";
 import { type SessionMode } from "../store/sessions.js";
 
 export interface FooterProps {
@@ -1528,7 +1528,7 @@ import { describe, it, expect } from "vitest";
 import React from "react";
 import { render } from "ink-testing-library";
 import { ChatScrollback } from "../../../../src/cli/tui/components/chat-scrollback.js";
-import { type TurnState } from "../../../../src/cli/tui/hooks/use-nawaitu-session.js";
+import { type TurnState } from "../../../../src/cli/tui/hooks/use-niato-session.js";
 
 const turn = (input: string, output?: string): TurnState => ({
   input,
@@ -1572,7 +1572,7 @@ Expected: FAIL.
 ```tsx
 import React from "react";
 import { Box, Text } from "ink";
-import { type TurnState } from "../hooks/use-nawaitu-session.js";
+import { type TurnState } from "../hooks/use-niato-session.js";
 
 export interface ChatScrollbackProps {
   turns: TurnState[];
@@ -1647,7 +1647,7 @@ describe("About screen", () => {
   it("renders version and license info", () => {
     const { lastFrame } = render(<About version="0.1.0" onBack={() => {}} />);
     const out = lastFrame() ?? "";
-    expect(out).toContain("Nawaitu");
+    expect(out).toContain("Niato");
     expect(out).toContain("0.1.0");
     expect(out).toMatch(/license/i);
   });
@@ -1680,7 +1680,7 @@ export function About({ version, onBack }: AboutProps): React.ReactElement {
 
   return (
     <Box flexDirection="column" paddingX={1}>
-      <Text bold color="cyan">Nawaitu</Text>
+      <Text bold color="cyan">Niato</Text>
       <Text color="gray">{`version ${version}`}</Text>
       <Box marginTop={1}>
         <Text>Intent-routing agent on the Claude Agent SDK.</Text>
@@ -1952,7 +1952,7 @@ git commit -m "feat(tui): Launcher screen — Lean menu + greeting"
 
 ## Task 15: Session screen (`screens/session.tsx`)
 
-This is the largest screen. It composes ChatScrollback + TextInput + Footer, and threads useNawaituSession with on-turn JSONL persistence.
+This is the largest screen. It composes ChatScrollback + TextInput + Footer, and threads useNiatoSession with on-turn JSONL persistence.
 
 **Files:**
 - Create: `src/cli/tui/screens/session.tsx`
@@ -1970,7 +1970,7 @@ import React from "react";
 import { render } from "ink-testing-library";
 import { Session } from "../../../../src/cli/tui/screens/session.js";
 import { type Companion } from "../../../../src/cli/companion-config.js";
-import { makeStubNawaitu } from "../_helpers/stub-nawaitu.js";
+import { makeStubNiato } from "../_helpers/stub-niato.js";
 
 const companion: Companion = {
   version: 1, name: "Arienz", voice: "warm", createdAt: "2026-04-28T00:00:00Z",
@@ -1978,7 +1978,7 @@ const companion: Companion = {
 
 describe("Session screen", () => {
   let dir: string;
-  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "nawaitu-session-")); });
+  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "niato-session-")); });
   afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
 
   it("submits a turn and writes it to the JSONL file", async () => {
@@ -1988,7 +1988,7 @@ describe("Session screen", () => {
         mode="casual"
         sessionId="ses-1"
         sessionsDir={dir}
-        nawaituFactory={() => makeStubNawaitu([{ output: "hi back" }])}
+        niatoFactory={() => makeStubNiato([{ output: "hi back" }])}
         replayedTurns={[]}
         onExit={() => {}}
       />,
@@ -2005,7 +2005,7 @@ describe("Session screen", () => {
         mode="casual"
         sessionId="ses-1"
         sessionsDir={dir}
-        nawaituFactory={() => makeStubNawaitu([{ output: "hi back" }])}
+        niatoFactory={() => makeStubNiato([{ output: "hi back" }])}
         replayedTurns={[]}
         onExit={() => {}}
       />,
@@ -2026,7 +2026,7 @@ describe("Session screen", () => {
         mode="casual"
         sessionId="ses-2"
         sessionsDir={dir}
-        nawaituFactory={() => makeStubNawaitu([])}
+        niatoFactory={() => makeStubNiato([])}
         replayedTurns={[
           { input: "earlier q", output: "earlier a", phase: "done" },
         ]}
@@ -2056,16 +2056,16 @@ import { ChatScrollback } from "../components/chat-scrollback.js";
 import { Footer } from "../components/footer.js";
 import { TextInput } from "../components/text-input.js";
 import {
-  useNawaituSession,
+  useNiatoSession,
   type TurnState,
-} from "../hooks/use-nawaitu-session.js";
+} from "../hooks/use-niato-session.js";
 import {
   appendSessionStart,
   appendTurn,
   type SessionMode,
 } from "../store/sessions.js";
 import { type Companion } from "../../companion-config.js";
-import { type Nawaitu } from "../../../core/compose.js";
+import { type Niato } from "../../../core/compose.js";
 import { type Logger } from "../../../observability/log.js";
 
 export interface SessionProps {
@@ -2073,7 +2073,7 @@ export interface SessionProps {
   mode: SessionMode;
   sessionId: string;
   sessionsDir?: string;
-  nawaituFactory: (logger: Logger) => Nawaitu;
+  niatoFactory: (logger: Logger) => Niato;
   replayedTurns: TurnState[];
   onExit: () => void;
 }
@@ -2083,7 +2083,7 @@ export function Session({
   mode,
   sessionId,
   sessionsDir,
-  nawaituFactory,
+  niatoFactory,
   replayedTurns,
   onExit,
 }: SessionProps): React.ReactElement {
@@ -2100,8 +2100,8 @@ export function Session({
     }
   }, [sessionId, mode, companion.version, sessionsDir, replayedTurns.length]);
 
-  const session = useNawaituSession(
-    nawaituFactory,
+  const session = useNiatoSession(
+    niatoFactory,
     sessionId,
     (turn: TurnState) => {
       if (turn.output !== undefined && turn.trace !== undefined) {
@@ -2253,7 +2253,7 @@ export function FirstRun({ onAuthPicked }: FirstRunProps): React.ReactElement {
 
   return (
     <Box flexDirection="column" paddingX={1}>
-      <Text bold color="cyan">Welcome to Nawaitu</Text>
+      <Text bold color="cyan">Welcome to Niato</Text>
       <Text color="gray">First run — let's pick your auth path.</Text>
       <Box marginTop={1}>
         <Menu
@@ -2309,7 +2309,7 @@ import React from "react";
 import { render } from "ink-testing-library";
 import { App } from "../../../src/cli/tui/app.js";
 import { type Companion } from "../../../src/cli/companion-config.js";
-import { makeStubNawaitu } from "./_helpers/stub-nawaitu.js";
+import { makeStubNiato } from "./_helpers/stub-niato.js";
 
 const companion: Companion = {
   version: 1, name: "Arienz", voice: "warm", createdAt: "2026-04-28T00:00:00Z",
@@ -2324,7 +2324,7 @@ function setupCompanionFile(dir: string): string {
 describe("App shell", () => {
   let root: string;
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), "nawaitu-app-"));
+    root = mkdtempSync(join(tmpdir(), "niato-app-"));
     mkdirSync(join(root, "sessions"), { recursive: true });
   });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
@@ -2336,7 +2336,7 @@ describe("App shell", () => {
         companionPath={companionPath}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([])}
+        niatoFactory={() => makeStubNiato([])}
         version="0.0.0-test"
       />,
     );
@@ -2349,11 +2349,11 @@ describe("App shell", () => {
         companionPath={join(root, "missing.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([])}
+        niatoFactory={() => makeStubNiato([])}
         version="0.0.0-test"
       />,
     );
-    expect(lastFrame()).toContain("Welcome to Nawaitu");
+    expect(lastFrame()).toContain("Welcome to Niato");
   });
 });
 ```
@@ -2398,14 +2398,14 @@ import {
   pruneSessions,
   type SessionMode,
 } from "./store/sessions.js";
-import { type Nawaitu } from "../../core/compose.js";
+import { type Niato } from "../../core/compose.js";
 import { type Logger } from "../../observability/log.js";
 
 export interface AppProps {
   companionPath?: string;
   sessionsDir?: string;
   authPath?: string;
-  nawaituFactory: (logger: Logger) => Nawaitu;
+  niatoFactory: (logger: Logger) => Niato;
   version: string;
 }
 
@@ -2413,7 +2413,7 @@ export function App({
   companionPath = defaultCompanionPath(),
   sessionsDir = defaultSessionsDir(),
   authPath = defaultAuthPath(),
-  nawaituFactory,
+  niatoFactory,
   version,
 }: AppProps): React.ReactElement {
   const { exit } = useApp();
@@ -2475,7 +2475,7 @@ export function App({
     // block once the Ink wizard ships.
     if (loadCompanion(companionPath) === null) {
       // eslint-disable-next-line no-console
-      console.log("\nAuth saved. Run `pnpm chat` once to set up your companion, then `nawaitu` again.\n");
+      console.log("\nAuth saved. Run `pnpm chat` once to set up your companion, then `niato` again.\n");
       exit();
       return;
     }
@@ -2537,7 +2537,7 @@ export function App({
     const props = screen.props as {
       sessionId: string;
       mode: SessionMode;
-      replayedTurns: import("./hooks/use-nawaitu-session.js").TurnState[];
+      replayedTurns: import("./hooks/use-niato-session.js").TurnState[];
     };
     return (
       <Session
@@ -2545,7 +2545,7 @@ export function App({
         mode={props.mode}
         sessionId={props.sessionId}
         sessionsDir={sessionsDir}
-        nawaituFactory={nawaituFactory}
+        niatoFactory={niatoFactory}
         replayedTurns={props.replayedTurns}
         onExit={stack.pop}
       />
@@ -2590,7 +2590,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { App } from "./app.js";
-import { createNawaitu } from "../../core/compose.js";
+import { createNiato } from "../../core/compose.js";
 import { genericPack } from "../../packs/generic/index.js";
 import { supportPack } from "../../packs/support/index.js";
 import { devToolsPack } from "../../packs/dev-tools/index.js";
@@ -2612,15 +2612,15 @@ async function main(): Promise<void> {
   const version = readVersion();
   const companion = loadCompanion();
 
-  const nawaituFactory = (logger: Logger): ReturnType<typeof createNawaitu> =>
-    createNawaitu({
+  const niatoFactory = (logger: Logger): ReturnType<typeof createNiato> =>
+    createNiato({
       packs: [genericPack, supportPack, devToolsPack],
       logger,
       ...(companion !== null ? { persona: buildPersonaFromCompanion(companion) } : {}),
     });
 
   const { waitUntilExit } = render(
-    <App nawaituFactory={nawaituFactory} version={version} />,
+    <App niatoFactory={niatoFactory} version={version} />,
   );
   await waitUntilExit();
 }
@@ -2658,11 +2658,11 @@ git commit -m "feat(tui): entry point — index.tsx renders App with all packs"
 
 ---
 
-## Task 19: Wire `package.json` script + `bin/nawaitu` default
+## Task 19: Wire `package.json` script + `bin/niato` default
 
 **Files:**
 - Modify: `package.json`
-- Modify: `bin/nawaitu`
+- Modify: `bin/niato`
 
 - [ ] **Step 1: Add `tui` script to `package.json`**
 
@@ -2691,20 +2691,20 @@ The full scripts block becomes (the new line is `tui`):
 }
 ```
 
-- [ ] **Step 2: Update `bin/nawaitu` default subcommand**
+- [ ] **Step 2: Update `bin/niato` default subcommand**
 
 Change the `set -- chat` line to `set -- tui`. The full file becomes:
 
 ```sh
 #!/usr/bin/env sh
-# Nawaitu CLI dispatcher.
+# Niato CLI dispatcher.
 #
 # Routes subcommands through pnpm to the matching script in package.json.
 # Defaults to `tui` when invoked with no args. Forwards any extra args
-# through, so `nawaitu chat --reset` becomes `pnpm chat --reset`.
+# through, so `niato chat --reset` becomes `pnpm chat --reset`.
 #
-# Setup (one-time): `pnpm link` from the repo root, then `nawaitu login`
-# and `nawaitu` (launches TUI) are available globally.
+# Setup (one-time): `pnpm link` from the repo root, then `niato login`
+# and `niato` (launches TUI) are available globally.
 
 set -e
 
@@ -2729,8 +2729,8 @@ Expected: PASS for both.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add package.json bin/nawaitu
-git commit -m "feat(cli): nawaitu defaults to TUI; chat subcommand kept as legacy alias"
+git add package.json bin/niato
+git commit -m "feat(cli): niato defaults to TUI; chat subcommand kept as legacy alias"
 ```
 
 ---
@@ -2752,12 +2752,12 @@ import React from "react";
 import { render } from "ink-testing-library";
 import { App } from "../../src/cli/tui/app.js";
 import { type Companion } from "../../src/cli/companion-config.js";
-import { makeStubNawaitu } from "./tui/_helpers/stub-nawaitu.js";
+import { makeStubNiato } from "./tui/_helpers/stub-niato.js";
 
 describe("TUI end-to-end smoke", () => {
   let root: string;
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), "nawaitu-smoke-"));
+    root = mkdtempSync(join(tmpdir(), "niato-smoke-"));
     mkdirSync(join(root, "sessions"), { recursive: true });
     const companion: Companion = {
       version: 1, name: "Arienz", voice: "warm", createdAt: "2026-04-28T00:00:00Z",
@@ -2772,7 +2772,7 @@ describe("TUI end-to-end smoke", () => {
         companionPath={join(root, "companion.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([{ output: "the answer is 42" }])}
+        niatoFactory={() => makeStubNiato([{ output: "the answer is 42" }])}
         version="0.0.0-smoke"
       />,
     );
@@ -2787,7 +2787,7 @@ describe("TUI end-to-end smoke", () => {
         companionPath={join(root, "companion.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([{ output: "the answer is 42" }])}
+        niatoFactory={() => makeStubNiato([{ output: "the answer is 42" }])}
         version="0.0.0-smoke"
       />,
     );
@@ -2800,7 +2800,7 @@ describe("TUI end-to-end smoke", () => {
         companionPath={join(root, "companion.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([{ output: "the answer is 42" }])}
+        niatoFactory={() => makeStubNiato([{ output: "the answer is 42" }])}
         version="0.0.0-smoke"
       />,
     );
@@ -2815,7 +2815,7 @@ describe("TUI end-to-end smoke", () => {
         companionPath={join(root, "companion.json")}
         sessionsDir={join(root, "sessions")}
         authPath={join(root, "auth.json")}
-        nawaituFactory={() => makeStubNawaitu([{ output: "the answer is 42" }])}
+        niatoFactory={() => makeStubNiato([{ output: "the answer is 42" }])}
         version="0.0.0-smoke"
       />,
     );
@@ -2876,27 +2876,27 @@ In `README.md`, after the existing "Quickstart" section (or in a sensible place 
 ```markdown
 ## TUI (end-user terminal app)
 
-Nawaitu ships with a polished terminal UI for end-user use. After installing
+Niato ships with a polished terminal UI for end-user use. After installing
 globally:
 
 ```bash
 pnpm link
-nawaitu          # launches the TUI
-nawaitu login    # OAuth subscription auth (wraps `claude /login`)
-nawaitu chat     # legacy multi-turn REPL (kept for backwards compat)
+niato          # launches the TUI
+niato login    # OAuth subscription auth (wraps `claude /login`)
+niato chat     # legacy multi-turn REPL (kept for backwards compat)
 ```
 
 **First run** walks you through:
 
 1. Auth pick — Claude subscription (recommended) or API key.
-2. Companion setup — name, voice, optional preferences (saved to `~/.nawaitu/companion.json`).
+2. Companion setup — name, voice, optional preferences (saved to `~/.niato/companion.json`).
 
 **The TUI gives you:**
 
 - A launcher with **New session**, **Resume last**, **Settings**, **About**.
 - Per-session mode pick (casual / dev) — same engine, different observability density.
 - Always-visible thin footer showing classify/dispatch ticks, latency, cost.
-- Sessions persisted as JSONL at `~/.nawaitu/sessions/{id}.jsonl` (last 50 retained).
+- Sessions persisted as JSONL at `~/.niato/sessions/{id}.jsonl` (last 50 retained).
 
 **Headless paths still work:** `echo "hi" | pnpm dev` and `pnpm dev "hi"` remain
 unchanged for scripting.

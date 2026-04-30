@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { Box, render, Text, useApp } from "ink";
 import { PhaseLine } from "./cli/tui/components/phase-line.js";
 import { TokenPanel } from "./cli/tui/components/token-panel.js";
-import { createNawaitu } from "./core/compose.js";
+import { createNiato } from "./core/compose.js";
 import { type DomainPack } from "./packs/DomainPack.js";
 import { genericPack } from "./packs/generic/index.js";
 import { supportPack } from "./packs/support/index.js";
@@ -43,7 +43,7 @@ function App({
     // always-falsy (the cleanup mutation isn't visible to the analyzer).
     const flag = { cancelled: false };
 
-    // A custom Logger pipes Nawaitu's existing log events into TUI state. The
+    // A custom Logger pipes Niato's existing log events into TUI state. The
     // turn-start / classification / turn messages are already emitted by
     // compose.ts — no run() refactor needed.
     const tuiLogger: Logger = {
@@ -75,8 +75,8 @@ function App({
 
     void (async () => {
       try {
-        const nawaitu = createNawaitu({ packs, logger: tuiLogger });
-        const turn = await nawaitu.run(userInput);
+        const niato = createNiato({ packs, logger: tuiLogger });
+        const turn = await niato.run(userInput);
         if (flag.cancelled) return;
         setState((s) => ({
           ...s,
@@ -112,7 +112,7 @@ function App({
     <Box flexDirection="column" paddingX={1}>
       <Box marginBottom={1}>
         <Text bold color="cyan">
-          Nawaitu
+          Niato
         </Text>
         <Text color="gray"> · single-turn TUI</Text>
       </Box>

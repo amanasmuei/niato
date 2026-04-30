@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { renderAuthError } from "../src/cli-error-render.js";
-import { NawaituAuthError } from "../src/core/errors.js";
+import { NiatoAuthError } from "../src/core/errors.js";
 
 describe("renderAuthError", () => {
-  it("returns the error message for NawaituAuthError", () => {
-    const err = new NawaituAuthError(
+  it("returns the error message for NiatoAuthError", () => {
+    const err = new NiatoAuthError(
       "No authentication configured.\nPick one:\n  * foo\n",
     );
     const out = renderAuthError(err);
@@ -12,7 +12,7 @@ describe("renderAuthError", () => {
     expect(out).toContain("No authentication configured");
     expect(out).toContain("Pick one");
     expect(out).not.toContain("at "); // no stack trace
-    expect(out).toMatch(/^nawaitu: /);
+    expect(out).toMatch(/^niato: /);
   });
 
   it("returns null for non-auth errors", () => {

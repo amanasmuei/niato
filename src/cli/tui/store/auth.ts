@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { z } from "zod";
 
-// Persisted auth configuration. Lives at ~/.nawaitu/auth.json by default,
+// Persisted auth configuration. Lives at ~/.niato/auth.json by default,
 // chmod 600. Resolution precedence at runtime: ANTHROPIC_API_KEY env var
 // (when non-empty) > stored file > null. The discriminated-union schema
 // enforces the invariant that api-key mode always carries a non-empty
@@ -27,7 +27,7 @@ export const AuthSchema = z.discriminatedUnion("mode", [
 export type AuthState = z.infer<typeof AuthSchema>;
 
 export function defaultAuthPath(): string {
-  return join(homedir(), ".nawaitu", "auth.json");
+  return join(homedir(), ".niato", "auth.json");
 }
 
 // Returns null on missing file, malformed JSON, or schema-invalid content.

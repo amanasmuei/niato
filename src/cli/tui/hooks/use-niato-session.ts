@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { type Nawaitu, type NawaituTurn } from "../../../core/compose.js";
+import { type Niato, type NiatoTurn } from "../../../core/compose.js";
 import { type IntentResult } from "../../../core/classifier/types.js";
 import { type TurnRecord } from "../../../observability/trace.js";
 import { type Logger } from "../../../observability/log.js";
@@ -24,7 +24,7 @@ export interface TurnState {
   phase: SessionPhase;
 }
 
-export interface UseNawaitu {
+export interface UseNiato {
   phase: SessionPhase;
   classification: IntentResult | undefined;
   trace: TurnRecord | undefined;
@@ -32,21 +32,21 @@ export interface UseNawaitu {
   run: (input: string) => Promise<void>;
 }
 
-// Owns the per-session Nawaitu lifecycle for the TUI: builds a single
-// Nawaitu instance via `factory` (passed a logger that drives in-flight
+// Owns the per-session Niato lifecycle for the TUI: builds a single
+// Niato instance via `factory` (passed a logger that drives in-flight
 // `phase` transitions: idle → classifying → dispatching → done|error)
 // and exposes a `run()` that records each turn into `turns`.
 //
-// Why a factory rather than passing a Nawaitu directly: the Nawaitu needs
+// Why a factory rather than passing a Niato directly: the Niato needs
 // the logger that this hook owns (so we can subscribe to the SDK's own
 // "turn start" / "classification" structured logs), and the logger lives
 // inside the hook. Constructing outside would either force the caller to
 // share a logger (awkward) or skip the structured-log subscription.
-export function useNawaituSession(
-  factory: (logger: Logger) => Nawaitu,
+export function useNiatoSession(
+  factory: (logger: Logger) => Niato,
   sessionId: string,
   onTurnComplete?: (turn: TurnState) => void,
-): UseNawaitu {
+): UseNiato {
   const [phase, setPhase] = useState<SessionPhase>("idle");
   const [classification, setClassification] = useState<
     IntentResult | undefined
@@ -59,7 +59,7 @@ export function useNawaituSession(
   // strict-mode safe (the initializer fires once even under
   // double-invocation) and avoids the eslint-irritating useRef + null-
   // check + non-null-assertion combo.
-  const [nawaitu] = useState<Nawaitu>(() => {
+  const [niato] = useState<Niato>(() => {
     const logger: Logger = {
       log(_level, message, fields): void {
         if (message === "turn start") {
@@ -103,7 +103,7 @@ export function useNawaituSession(
         },
       ]);
       try {
-        const turnResult: NawaituTurn = await nawaitu.run(input, sessionId);
+        const turnResult: NiatoTurn = await niato.run(input, sessionId);
         const next: TurnState = {
           input,
           output: turnResult.result,
@@ -137,7 +137,7 @@ export function useNawaituSession(
         onTurnComplete?.(errorTurn);
       }
     },
-    [nawaitu, sessionId, onTurnComplete],
+    [niato, sessionId, onTurnComplete],
   );
 
   return { phase, classification, trace, turns, run };

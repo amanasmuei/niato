@@ -12,8 +12,8 @@ import {
   maxLengthValidator,
 } from "../guardrails/validators.js";
 import {
-  NawaituInputRejectedError,
-  NawaituBudgetExceededError,
+  NiatoInputRejectedError,
+  NiatoBudgetExceededError,
 } from "../guardrails/errors.js";
 import {
   InMemorySessionStore,
@@ -30,12 +30,12 @@ import { loadConfig, resolveAuthMode, type Config } from "./config.js";
 
 // Where the SDK persists conversation transcripts. Setting cwd here
 // (rather than letting the SDK default to process.cwd()) means session
-// memory is stable regardless of where the user launched nawaitu from —
-// `nawaitu` from ~/Documents and `nawaitu` from ~/Projects/foo see the
+// memory is stable regardless of where the user launched niato from —
+// `niato` from ~/Documents and `niato` from ~/Projects/foo see the
 // same session storage.
-const NAWAITU_SDK_SESSIONS_DIR = join(homedir(), ".nawaitu", "sdk-sessions");
+const NIATO_SDK_SESSIONS_DIR = join(homedir(), ".niato", "sdk-sessions");
 
-export interface NawaituOptions {
+export interface NiatoOptions {
   packs: DomainPack[];
   classifier?: Classifier;
   // Hooks applied to every orchestrator session. Each pack may also declare
@@ -43,12 +43,12 @@ export interface NawaituOptions {
   // hooks → pack hooks (in that order) and passes the result to the SDK.
   globalHooks?: Hooks;
   // Synchronous validators run on the raw user input before classification.
-  // First failure aborts the turn with a NawaituInputRejectedError. Default:
+  // First failure aborts the turn with a NiatoInputRejectedError. Default:
   // [maxLengthValidator(32_000)]. Pass [] to disable; promptInjectionValidator
   // is opt-in (false-positive risk varies by domain).
   inputValidators?: InputValidator[];
   // Per-session cumulative-cost ceiling (USD). Checked at the start of each
-  // run(); the turn is rejected with NawaituBudgetExceededError before any
+  // run(); the turn is rejected with NiatoBudgetExceededError before any
   // tokens are spent. Mid-turn throttling is deferred to a later phase
   // (the SDK does not currently expose per-tool-call cost estimation).
   costLimitUsd?: number;
@@ -76,11 +76,11 @@ export function ensureBudget(
   if (limitUsd === undefined) return;
   const cumulative = session.metrics.cumulativeCostUsd;
   if (cumulative >= limitUsd) {
-    throw new NawaituBudgetExceededError(cumulative, limitUsd);
+    throw new NiatoBudgetExceededError(cumulative, limitUsd);
   }
 }
 
-export interface NawaituTurn {
+export interface NiatoTurn {
   result: string;
   classification: IntentResult;
   session: SessionContext;
@@ -88,18 +88,18 @@ export interface NawaituTurn {
   trace: TurnRecord;
 }
 
-export interface Nawaitu {
-  run(userInput: string, sessionId?: string): Promise<NawaituTurn>;
+export interface Niato {
+  run(userInput: string, sessionId?: string): Promise<NiatoTurn>;
   // Returns the rolling per-session metrics aggregated across every turn
   // run() has completed for the given session. Returns undefined when the
   // session is unknown (e.g. never created or evicted).
   metrics(sessionId: string): SessionMetrics | undefined;
 }
 
-export function createNawaitu(options: NawaituOptions): Nawaitu {
+export function createNiato(options: NiatoOptions): Niato {
   const config = options.config ?? loadConfig();
   const logger =
-    options.logger ?? createConsoleLogger(config.NAWAITU_LOG_LEVEL);
+    options.logger ?? createConsoleLogger(config.NIATO_LOG_LEVEL);
   // Phase 9: log which auth mode the SDK will use so the path is never
   // ambiguous. Both modes go through the Agent SDK's auto-resolution;
   // this is purely an operational signal for the user.
@@ -113,7 +113,7 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
   const sessions = new InMemorySessionStore();
 
   if (options.packs.length === 0) {
-    throw new Error("createNawaitu: at least one DomainPack is required");
+    throw new Error("createNiato: at least one DomainPack is required");
   }
 
   const orchestratorRun = options.orchestratorRunner ?? runOrchestrator;
@@ -128,7 +128,7 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
       for (const validator of validators) {
         const result = validator(userInput);
         if (!result.ok) {
-          throw new NawaituInputRejectedError(result.reason);
+          throw new NiatoInputRejectedError(result.reason);
         }
       }
 
@@ -158,13 +158,13 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
         classification,
         packs: options.packs,
         hooks: orchestratorHooks,
-        cwd: NAWAITU_SDK_SESSIONS_DIR,
+        cwd: NIATO_SDK_SESSIONS_DIR,
         ...sessionArg,
         ...(options.persona !== undefined ? { persona: options.persona } : {}),
       });
 
       // Flip the started flag AFTER a successful turn so a thrown orchestrator
-      // (or any pre-turn rejection like NawaituBudgetExceededError) doesn't
+      // (or any pre-turn rejection like NiatoBudgetExceededError) doesn't
       // leave the session in an inconsistent resume-but-not-yet-started state.
       session.started = true;
 
@@ -204,7 +204,7 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
     metrics(sessionId) {
       const m = sessions.get(sessionId)?.metrics;
       // structuredClone defends against callers mutating the live ledger
-      // (e.g. `nawaitu.metrics(id).guardrailsTriggered["Bash"] = 0` to
+      // (e.g. `niato.metrics(id).guardrailsTriggered["Bash"] = 0` to
       // "reset" a dashboard view would silently corrupt the session's
       // running state). Telemetry callers do this kind of thing.
       return m === undefined ? undefined : structuredClone(m);

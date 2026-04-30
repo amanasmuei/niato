@@ -1,4 +1,4 @@
-import { NawaituAuthError } from "../core/errors.js";
+import { NiatoAuthError } from "../core/errors.js";
 
 export type ErrorKind =
   | "auth"
@@ -40,7 +40,7 @@ const RATE_LIMIT_PATTERNS = [
 const MALFORMED_PATTERNS = [/zod/i, /invalid intent classification/i];
 
 export function classifyError(err: unknown): ClassifiedError | null {
-  if (err instanceof NawaituAuthError) {
+  if (err instanceof NiatoAuthError) {
     return { kind: "auth", message: err.message, raw: err.message };
   }
   if (!(err instanceof Error)) return null;
@@ -58,7 +58,7 @@ export function classifyError(err: unknown): ClassifiedError | null {
     return {
       kind: "auth-expired",
       message:
-        "Auth invalid or expired. Re-run `nawaitu` and re-authenticate from Settings.",
+        "Auth invalid or expired. Re-run `niato` and re-authenticate from Settings.",
       raw,
     };
   }

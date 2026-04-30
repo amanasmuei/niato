@@ -24,7 +24,7 @@ let workDir: string;
 let baselinePath: string;
 
 beforeEach(() => {
-  workDir = mkdtempSync(join(tmpdir(), "nawaitu-eval-baseline-"));
+  workDir = mkdtempSync(join(tmpdir(), "niato-eval-baseline-"));
   baselinePath = join(workDir, "baseline.json");
 });
 

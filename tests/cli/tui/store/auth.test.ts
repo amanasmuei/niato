@@ -19,7 +19,7 @@ describe("auth store", () => {
   let originalEnv: string | undefined;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "nawaitu-auth-"));
+    dir = mkdtempSync(join(tmpdir(), "niato-auth-"));
     path = join(dir, "auth.json");
     originalEnv = process.env["ANTHROPIC_API_KEY"];
     delete process.env["ANTHROPIC_API_KEY"];
