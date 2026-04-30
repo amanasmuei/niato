@@ -1,6 +1,6 @@
 {
   "name": "nawaitu",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Intent-routing agent on the Claude Agent SDK. Nawaitu (نَوَيْتُ) — \"I have intended\" — declares before it acts.",
   "type": "module",
   "main": "./dist/index.js",
