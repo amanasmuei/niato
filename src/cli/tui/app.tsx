@@ -7,6 +7,8 @@ import { Session } from "./screens/session.js";
 import { Settings } from "./screens/settings.js";
 import { About } from "./screens/about.js";
 import { FirstRun } from "./screens/first-run.js";
+import { ApiKeyEntry } from "./screens/api-key-entry.js";
+import { CompanionWizard } from "./screens/companion-wizard.js";
 import { Menu } from "./components/menu.js";
 import { type TurnState } from "./hooks/use-nawaitu-session.js";
 import {
@@ -151,40 +153,58 @@ export function App({
     }
   };
 
+  const proceedAfterAuth = (): void => {
+    const existing = loadCompanion(companionPath);
+    if (existing === null) {
+      stack.replace("companion-wizard", {});
+      return;
+    }
+    setCompanion(existing);
+    stack.replace("launcher", {});
+  };
+
   const onAuthPicked = (mode: AuthMode): void => {
     if (mode === "subscription") {
       saveAuth({ mode: "subscription" }, authPath);
       setAuth({ mode: "subscription" });
-    } else {
-      const env = process.env["ANTHROPIC_API_KEY"];
-      if (typeof env !== "string" || env.length === 0) {
-        // Do not silently fall through to subscription: the user picked
-        // api-key, and persisting a different mode would mislead them and
-        // skip first-run on next launch. Surface the requirement clearly
-        // and exit without writing auth.json so first-run re-shows.
-        process.stderr.write(
-          "\nAPI key auth requires ANTHROPIC_API_KEY. Set it in your shell and re-run `nawaitu`.\n",
-        );
-        exit();
-        return;
-      }
+      proceedAfterAuth();
+      return;
+    }
+    // api-key path: env-var shortcut still wins for power users; otherwise
+    // show the in-app key-entry screen.
+    const env = process.env["ANTHROPIC_API_KEY"];
+    if (typeof env === "string" && env.length > 0) {
       const next: AuthState = { mode: "api-key", apiKey: env };
       saveAuth(next, authPath);
       setAuth(next);
-    }
-    // Companion wizard hand-off: implementation plan defers Ink-native wizard
-    // to v1.x. For v1, after auth is picked, app exits with a console hint
-    // for the user to run the existing readline-based wizard. Replace this
-    // block once the Ink wizard ships.
-    if (loadCompanion(companionPath) === null) {
-      console.log(
-        "\nAuth saved. Run `pnpm chat` once to set up your companion, then `nawaitu` again.\n",
-      );
-      exit();
+      proceedAfterAuth();
       return;
     }
-    setCompanion(loadCompanion(companionPath));
+    stack.replace("api-key-entry", {});
+  };
+
+  const onApiKeySubmit = (apiKey: string): void => {
+    const next: AuthState = { mode: "api-key", apiKey };
+    saveAuth(next, authPath);
+    setAuth(next);
+    proceedAfterAuth();
+  };
+
+  const onApiKeyCancel = (): void => {
+    stack.replace("first-run", {});
+  };
+
+  const onCompanionComplete = (newCompanion: Companion): void => {
+    setCompanion(newCompanion);
     stack.replace("launcher", {});
+  };
+
+  const onCompanionCancel = (): void => {
+    // Replace with first-run rather than pop: the wizard is always reached via
+    // stack.replace so it occupies the bottom of the stack. pop() on a
+    // singleton would leave the wizard showing; first-run is the correct
+    // fallback for both first-run flow and settings flow.
+    stack.replace("first-run", {});
   };
 
   const screen = stack.current;
@@ -207,10 +227,7 @@ export function App({
         auth={auth}
         onBack={stack.pop}
         onResetCompanion={() => {
-          console.log(
-            "\nRun `pnpm chat --reset` to re-run the companion wizard.\n",
-          );
-          exit();
+          stack.replace("companion-wizard", {});
         }}
         onResetAuth={() => {
           stack.replace("first-run", {});
@@ -269,6 +286,18 @@ export function App({
         />
       );
     }
+  }
+  if (screen.name === "api-key-entry") {
+    return <ApiKeyEntry onSubmit={onApiKeySubmit} onCancel={onApiKeyCancel} />;
+  }
+  if (screen.name === "companion-wizard") {
+    return (
+      <CompanionWizard
+        onComplete={onCompanionComplete}
+        onCancel={onCompanionCancel}
+        companionPath={companionPath}
+      />
+    );
   }
   // Defensive fallback. The branches above cover every reachable
   // (screen.name, companion) combination produced by our push/replace
