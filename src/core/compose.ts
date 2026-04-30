@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { type DomainPack } from "../packs/DomainPack.js";
 import { type Classifier, type IntentResult } from "./classifier/types.js";
@@ -25,6 +27,13 @@ import {
 } from "../observability/metrics.js";
 import { type Persona } from "./persona.js";
 import { loadConfig, resolveAuthMode, type Config } from "./config.js";
+
+// Where the SDK persists conversation transcripts. Setting cwd here
+// (rather than letting the SDK default to process.cwd()) means session
+// memory is stable regardless of where the user launched nawaitu from —
+// `nawaitu` from ~/Documents and `nawaitu` from ~/Projects/foo see the
+// same session storage.
+const NAWAITU_SDK_SESSIONS_DIR = join(homedir(), ".nawaitu", "sdk-sessions");
 
 export interface NawaituOptions {
   packs: DomainPack[];
@@ -55,6 +64,9 @@ export interface NawaituOptions {
   persona?: Persona;
   config?: Config;
   logger?: Logger;
+  // Internal seam: lets tests substitute the orchestrator runner. Production
+  // callers should leave this undefined — it defaults to runOrchestrator.
+  orchestratorRunner?: typeof runOrchestrator;
 }
 
 export function ensureBudget(
@@ -104,6 +116,7 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
     throw new Error("createNawaitu: at least one DomainPack is required");
   }
 
+  const orchestratorRun = options.orchestratorRunner ?? runOrchestrator;
   const orchestratorHooks = mergeHooks(
     options.globalHooks ?? {},
     ...options.packs.map((p) => p.hooks ?? {}),
@@ -134,13 +147,26 @@ export function createNawaitu(options: NawaituOptions): Nawaitu {
       const classification = await classifier.classify(userInput);
       logger.log("debug", "classification", { classification });
 
-      const orchestratorResult = await runOrchestrator({
+      // First turn of a session uses sessionId; subsequent turns use resume.
+      // The SDK's Options.sessionId and Options.resume are mutually exclusive.
+      const sessionArg = session.started
+        ? { resume: session.id }
+        : { sessionId: session.id };
+
+      const orchestratorResult = await orchestratorRun({
         userInput,
         classification,
         packs: options.packs,
         hooks: orchestratorHooks,
+        cwd: NAWAITU_SDK_SESSIONS_DIR,
+        ...sessionArg,
         ...(options.persona !== undefined ? { persona: options.persona } : {}),
       });
+
+      // Flip the started flag AFTER a successful turn so a thrown orchestrator
+      // (or any pre-turn rejection like NawaituBudgetExceededError) doesn't
+      // leave the session in an inconsistent resume-but-not-yet-started state.
+      session.started = true;
 
       const trace = buildTurnRecord({
         sessionId: session.id,

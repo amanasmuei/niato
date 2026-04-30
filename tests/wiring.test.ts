@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 import {
   createNawaitu,
   devToolsPack,
@@ -19,6 +21,8 @@ import { emptySessionMetrics } from "../src/observability/metrics.js";
 import {
   mergePackMcpServers,
   unionAllowedTools,
+  type OrchestratorInput,
+  type OrchestratorOutput,
 } from "../src/core/orchestrator/orchestrator.js";
 import { SUPPORT_STUB_SERVER_NAME } from "../src/packs/support/tools/support_stub.js";
 
@@ -427,5 +431,50 @@ describe("resolveAuthMode", () => {
 
   it("throws NawaituAuthError when neither auth path is configured", () => {
     expect(() => resolveAuthMode(loadConfig({}))).toThrow(NawaituAuthError);
+  });
+});
+
+describe("nawaitu.run session threading (v0.4)", () => {
+  it("passes sessionId on first turn and resume on subsequent turns, with stable cwd", async () => {
+    const captured: {
+      sessionId: string | undefined;
+      resume: string | undefined;
+      cwd: string | undefined;
+    }[] = [];
+
+    const stubOrchestratorRun = vi.fn(
+      (input: OrchestratorInput): Promise<OrchestratorOutput> => {
+        captured.push({
+          sessionId: input.sessionId,
+          resume: input.resume,
+          cwd: input.cwd,
+        });
+        return Promise.resolve({ result: "ok", messages: [] });
+      },
+    );
+
+    const nawaitu = createNawaitu({
+      packs: [genericPack],
+      classifier: {
+        classify: (_input: string) =>
+          Promise.resolve({
+            intent: "question",
+            domain: "generic",
+            confidence: 1,
+          }),
+      },
+      orchestratorRunner: stubOrchestratorRun,
+      config: { ANTHROPIC_API_KEY: "sk-test", NAWAITU_LOG_LEVEL: "error" },
+    });
+
+    const turn1 = await nawaitu.run("hi");
+    const turn2 = await nawaitu.run("again", turn1.session.id);
+
+    expect(captured[0]?.sessionId).toBe(turn1.session.id);
+    expect(captured[0]?.resume).toBeUndefined();
+    expect(captured[1]?.sessionId).toBeUndefined();
+    expect(captured[1]?.resume).toBe(turn1.session.id);
+    expect(captured[0]?.cwd).toBe(join(homedir(), ".nawaitu", "sdk-sessions"));
+    expect(turn2.session.id).toBe(turn1.session.id);
   });
 });
