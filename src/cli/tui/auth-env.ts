@@ -10,8 +10,9 @@ import { loadAuth } from "./store/auth.js";
 // choice. api-key mode never sets the env: ANTHROPIC_API_KEY (set by the
 // in-app key-entry flow in v0.3) carries that path on its own.
 export function applyPersistedAuthEnv(authPath?: string): void {
-  if (typeof process.env["NAWAITU_AUTH"] === "string") return;
-  const persisted = authPath !== undefined ? loadAuth(authPath) : loadAuth();
+  const explicit = process.env["NAWAITU_AUTH"];
+  if (typeof explicit === "string" && explicit.length > 0) return;
+  const persisted = loadAuth(authPath);
   if (persisted === null) return;
   if (persisted.mode === "subscription") {
     process.env["NAWAITU_AUTH"] = "subscription";

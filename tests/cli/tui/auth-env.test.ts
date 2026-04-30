@@ -57,4 +57,11 @@ describe("applyPersistedAuthEnv", () => {
     applyPersistedAuthEnv(authPath);
     expect(process.env["NAWAITU_AUTH"]).toBeUndefined();
   });
+
+  it("treats empty NAWAITU_AUTH as unset and falls back to persisted choice", () => {
+    process.env["NAWAITU_AUTH"] = "";
+    writeFileSync(authPath, JSON.stringify({ mode: "subscription" }));
+    applyPersistedAuthEnv(authPath);
+    expect(process.env["NAWAITU_AUTH"]).toBe("subscription");
+  });
 });
