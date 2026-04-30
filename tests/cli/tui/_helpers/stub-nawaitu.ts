@@ -43,6 +43,7 @@ export function makeStubNawaitu(responses: StubResponse[]): Nawaitu {
         id,
         createdAt: new Date(0),
         metrics,
+        started: false,
       };
       return {
         result: r.output,

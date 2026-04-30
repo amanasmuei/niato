@@ -31,6 +31,7 @@ function fakeSession(cumulativeCostUsd: number): SessionContext {
     id: "test-session",
     createdAt: new Date(0),
     metrics,
+    started: false,
   };
 }
 

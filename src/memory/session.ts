@@ -12,6 +12,11 @@ export interface SessionContext {
   id: string;
   createdAt: Date;
   metrics: SessionMetrics;
+  // True once the first orchestrator turn has resolved for this session.
+  // Callers (compose.ts) flip this; the store does not auto-flip on
+  // create or get. Used to decide between SDK Options.sessionId (first
+  // turn) vs Options.resume (subsequent turns).
+  started: boolean;
 }
 
 // Phase 1 in-memory store. Real long-term memory arrives in a later phase;
@@ -28,6 +33,7 @@ export class InMemorySessionStore {
       id: id ?? randomUUID(),
       createdAt: new Date(),
       metrics: emptySessionMetrics(),
+      started: false,
     };
     this.sessions.set(session.id, session);
     return session;
