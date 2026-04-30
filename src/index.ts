@@ -30,6 +30,11 @@ export {
   NawaituBudgetExceededError,
 } from "./guardrails/errors.js";
 export { NawaituAuthError } from "./core/errors.js";
+export { classifyError } from "./cli/error-classify.js";
+export type {
+  ClassifiedError,
+  ErrorKind,
+} from "./cli/error-classify.js";
 export type { Logger, LogLevel } from "./observability/log.js";
 export type {
   TurnRecord,
