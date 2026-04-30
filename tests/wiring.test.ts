@@ -410,11 +410,11 @@ describe("loadConfig", () => {
 describe("resolveAuthMode", () => {
   it("returns 'api_key' when ANTHROPIC_API_KEY is set", () => {
     expect(
-      resolveAuthMode(loadConfig({ ANTHROPIC_API_KEY: "sk-test" })),
+      resolveAuthMode(loadConfig({ ANTHROPIC_API_KEY: "sk-test" }), {}),
     ).toBe("api_key");
   });
 
-  it("returns 'oauth_subscription' when ANTHROPIC_API_KEY is unset", () => {
-    expect(resolveAuthMode(loadConfig({}))).toBe("oauth_subscription");
+  it("throws NawaituAuthError when neither auth path is configured", () => {
+    expect(() => resolveAuthMode(loadConfig({}), {})).toThrow();
   });
 });
