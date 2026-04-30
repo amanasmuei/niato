@@ -13,6 +13,7 @@ import { loadCompanion } from "../companion-config.js";
 import { type Logger } from "../../observability/log.js";
 import { applyPersistedAuthEnv } from "./auth-env.js";
 import { renderAuthError } from "../../cli-error-render.js";
+import { resolvePacks } from "./resolve-packs.js";
 
 function readVersion(): string {
   try {
@@ -37,9 +38,14 @@ async function main(): Promise<void> {
   const version = readVersion();
   const companion = loadCompanion();
 
+  const packs = resolvePacks(
+    { generic: genericPack, support: supportPack, dev_tools: devToolsPack },
+    process.env,
+  );
+
   const nawaituFactory = (logger: Logger): Nawaitu =>
     createNawaitu({
-      packs: [genericPack, supportPack, devToolsPack],
+      packs,
       logger,
       ...(companion !== null
         ? { persona: buildPersonaFromCompanion(companion) }
