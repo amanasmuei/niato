@@ -43,6 +43,14 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amanasmuei/niato.git"
+  },
+  "homepage": "https://github.com/amanasmuei/niato#readme",
+  "bugs": {
+    "url": "https://github.com/amanasmuei/niato/issues"
+  },
   "keywords": [
     "claude",
     "agent-sdk",
