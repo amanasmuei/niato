@@ -37,7 +37,11 @@ export function createSonnetClassifier(
       const queryOptions: Options = {
         model,
         systemPrompt,
-        maxTurns: 1,
+        // OAuth path's structured-output flow needs ≥2 turns for the SDK to
+        // finalize json_schema results. API-key path completes in 1, but the
+        // higher ceiling is harmless: the model still exits early when the
+        // structured output is ready.
+        maxTurns: 2,
         settingSources: [],
         outputFormat: {
           type: "json_schema",

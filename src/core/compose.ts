@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
@@ -115,6 +116,12 @@ export function createNiato(options: NiatoOptions): Niato {
   if (options.packs.length === 0) {
     throw new Error("createNiato: at least one DomainPack is required");
   }
+
+  // Pre-create the SDK sessions directory. The Agent SDK spawns its child
+  // process at this cwd; a non-existent path causes a misleading
+  // "Claude Code native binary not found" error from the SDK's onExit
+  // handler. Idempotent — recursive: true makes existing dirs a no-op.
+  mkdirSync(NIATO_SDK_SESSIONS_DIR, { recursive: true });
 
   const orchestratorRun = options.orchestratorRunner ?? runOrchestrator;
   const orchestratorHooks = mergeHooks(

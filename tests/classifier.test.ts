@@ -87,7 +87,7 @@ describe("createSonnetClassifier", () => {
 
     expect(args.prompt).toBe("what is 2+2");
     expect(args.options.model).toBe("claude-sonnet-4-6");
-    expect(args.options.maxTurns).toBe(1);
+    expect(args.options.maxTurns).toBe(2);
     expect(args.options.outputFormat.type).toBe("json_schema");
     expect(args.options.outputFormat.schema["type"]).toBe("object");
     // Pack vocabulary stays in the system prompt — auth-mode-agnostic.

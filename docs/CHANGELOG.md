@@ -2,6 +2,18 @@
 
 All notable changes to Niato, since v0.2.0 (the first publishable release).
 
+## v1.0.3 — 2026-05-01
+
+### Fixed
+- **OAuth subscription path** now actually works end-to-end. Two pre-existing bugs masked each other:
+  - `~/.niato/sdk-sessions/` was assumed to exist as the SDK child-process `cwd` but never auto-created — fresh installs hit a misleading "Claude Code native binary not found" error. `createNiato()` now `mkdirSync(..., { recursive: true })` at startup.
+  - Classifier `maxTurns: 1` was sufficient on the API-key path but caused `error_max_turns` on the OAuth path's `json_schema` flow. Bumped to `maxTurns: 2`. Harmless on API-key (model exits early when ready); unblocks OAuth.
+- Both bugs were never caught in CI because every E2E suite auto-skips when `ANTHROPIC_API_KEY` is unset, and CI runs with no key.
+
+### Auth notes (no code change, doc clarification)
+- The Agent SDK reads `CLAUDE_CODE_OAUTH_TOKEN`, NOT `ANTHROPIC_API_KEY`, on the OAuth path. Pasting an `sk-ant-oat01-` token into `ANTHROPIC_API_KEY` will be sent as a Bearer header and rejected by Anthropic.
+- Generate a token via `claude setup-token` (requires Pro/Max/Team/Enterprise subscription). Personal use only per Anthropic ToS — distributed products must use a developer API key.
+
 ## v1.0.2 — 2026-05-01
 
 ### Changed
