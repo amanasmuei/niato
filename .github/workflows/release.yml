@@ -1,0 +1,133 @@
+name: Release
+
+# Publishes niato to npm when a vX.Y.Z tag is pushed. Also supports
+# manual re-runs via workflow_dispatch with an explicit tag input
+# (useful for retrying a failed publish).
+#
+# Setup (one-time):
+#   1. Create a granular access token at https://www.npmjs.com/settings/<you>/tokens
+#      Scope: "Publish only" → "niato" package
+#      "Bypass 2FA" → enabled (required for CI publishes; CI cannot read your TOTP)
+#   2. Repo settings → Secrets and variables → Actions → New repository secret
+#      Name: NPM_TOKEN  ·  Value: the token from step 1
+#   3. Push a vX.Y.Z tag and this workflow runs.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (must already exist, e.g. v1.0.0)"
+        required: true
+        type: string
+
+# Permissions required for npm provenance attestation. id-token: write
+# lets the workflow mint a Sigstore-signed attestation that the package
+# was built in this exact CI run.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm-publish # add reviewers in repo settings → Environments to gate releases
+
+    steps:
+      # All untrusted-input handling goes via env: (not ${{ }} interpolation
+      # inside run: blocks) so a maliciously-named tag can never inject shell
+      # commands. See: https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/
+
+      - name: Resolve target ref
+        id: ref
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          GH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$INPUT_TAG"
+            REF="refs/tags/$INPUT_TAG"
+          else
+            TAG="${GH_REF#refs/tags/}"
+            REF="$GH_REF"
+          fi
+          # Defensive validation: a tag should match v<digits>.<digits>.<digits>
+          # with optional pre-release suffix. Anything else is suspicious and
+          # we abort rather than feed it downstream.
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$'; then
+            echo "::error::Tag '$TAG' does not match expected vX.Y.Z[-pre] format"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.ref }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node.js + npm registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify package.json version matches tag
+        env:
+          TAG: ${{ steps.ref.outputs.tag }}
+        run: |
+          set -euo pipefail
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          # Strip leading 'v' from tag (resolve step already validated shape)
+          TAG_VERSION="${TAG#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION)"
+            echo "Bump package.json before tagging, or retag at the bumped commit."
+            exit 1
+          fi
+          echo "Version match: $PKG_VERSION"
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Publish to npm (with provenance)
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        env:
+          TAG: ${{ steps.ref.outputs.tag }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Published niato@$TAG"
+            echo ""
+            echo "- Tag: \`$TAG\`"
+            echo "- Registry: https://www.npmjs.com/package/niato"
+            echo "- Provenance: signed via Sigstore (id-token OIDC)"
+          } >> "$GITHUB_STEP_SUMMARY"

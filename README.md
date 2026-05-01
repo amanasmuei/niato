@@ -445,6 +445,22 @@ Conventions: TypeScript strict, one `AgentDefinition` per file, prompts longer t
 
 ---
 
+## Releasing
+
+CI/CD lives in `.github/workflows/`:
+
+- **`ci.yml`** — runs typecheck + lint + test + build on every push and PR.
+- **`release.yml`** — publishes to npm with Sigstore provenance when a `vX.Y.Z` tag is pushed. Requires an `NPM_TOKEN` repo secret (granular access token, publish-only, bypass-2FA enabled).
+
+Full setup + per-release flow in [`docs/RELEASING.md`](./docs/RELEASING.md). TL;DR for an existing setup:
+
+```bash
+# Bump version in package.json + CHANGELOG.md, commit, then:
+git tag -a vX.Y.Z -m "vX.Y.Z"
+git push origin master vX.Y.Z
+# CI takes over: builds, validates, publishes to npm.
+```
+
 ## Roadmap & status
 
 **v1.0.0 — General Availability.** Plans 1–4 of the v1 release roadmap shipped. See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for the full history.
