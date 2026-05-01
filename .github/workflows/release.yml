@@ -6,7 +6,7 @@ name: Release
 #
 # Setup (one-time):
 #   1. Create a granular access token at https://www.npmjs.com/settings/<you>/tokens
-#      Scope: "Publish only" → "@amanasmuei/niato" package (or user-level)
+#      Scope: "Publish only" → "@aman_asmuei/niato" package (or user-level)
 #      "Bypass 2FA" → enabled (required for CI publishes; CI cannot read your TOTP)
 #   2. Repo settings → Secrets and variables → Actions → New repository secret
 #      Name: NPM_TOKEN  ·  Value: the token from step 1
@@ -125,9 +125,9 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo "### Published @amanasmuei/niato@$TAG"
+            echo "### Published @aman_asmuei/niato@$TAG"
             echo ""
             echo "- Tag: \`$TAG\`"
-            echo "- Registry: https://www.npmjs.com/package/@amanasmuei/niato"
+            echo "- Registry: https://www.npmjs.com/package/@aman_asmuei/niato"
             echo "- Provenance: signed via Sigstore (id-token OIDC)"
           } >> "$GITHUB_STEP_SUMMARY"

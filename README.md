@@ -58,7 +58,7 @@ Requires **Node 20.6+**. Three commands to your first turn:
 
 ```bash
 # 1. Install
-npm i -g @amanasmuei/niato
+npm i -g @aman_asmuei/niato
 
 # 2. Authenticate (pick one)
 export ANTHROPIC_API_KEY=sk-ant-...        # developer API path (recommended)
@@ -69,7 +69,7 @@ niato
 
 That's it. The TUI walks you through companion setup on first run — no shell env vars, no config files to edit by hand.
 
-> **Prefer not to install globally?** `npx @amanasmuei/niato` works the same way.
+> **Prefer not to install globally?** `npx @aman_asmuei/niato` works the same way.
 >
 > **Subscription auth instead of API key?** See [Authentication](#authentication) — `NIATO_AUTH=subscription` opts in (with ToS caveats).
 
@@ -110,7 +110,7 @@ export NIATO_PACKS=support,dev_tools
 The package exports `createNiato(...)` as the entry-point factory. Minimal example:
 
 ```ts
-import { createNiato, genericPack } from "@amanasmuei/niato";
+import { createNiato, genericPack } from "@aman_asmuei/niato";
 
 const niato = createNiato({ packs: [genericPack] });
 
@@ -129,7 +129,7 @@ import {
   supportPack,
   promptInjectionValidator,
   maxLengthValidator,
-} from "@amanasmuei/niato";
+} from "@aman_asmuei/niato";
 
 const niato = createNiato({
   packs: [genericPack, supportPack],
@@ -156,7 +156,7 @@ const niato = createNiato({
 | `NiatoBudgetExceededError` | Session cumulative cost ≥ `costLimitUsd` | `cumulativeUsd`, `limitUsd` |
 | `NiatoAuthError` | Neither auth path configured at startup | actionable message |
 
-For non-Niato errors (network, 401, 429, malformed model output), `classifyError(err)` from `@amanasmuei/niato` returns a `ClassifiedError` with a friendly message — used by the TUI, available to library consumers.
+For non-Niato errors (network, 401, 429, malformed model output), `classifyError(err)` from `@aman_asmuei/niato` returns a `ClassifiedError` with a friendly message — used by the TUI, available to library consumers.
 
 ---
 
