@@ -2,6 +2,14 @@
 
 All notable changes to Niato, since v0.2.0 (the first publishable release).
 
+## v1.0.1 — 2026-05-01
+
+### Changed
+- Renamed npm package from `niato` to `@amanasmuei/niato`. The unscoped name was rejected by npm at publish time as too similar to existing packages (`nano`, `nats`). The scoped name is the lowest-churn fix; the bin command (`niato`), the directory layout, and every other reference to the project name are unchanged.
+
+### Fixed
+- v1.0.0's release CI run failed at the `Publish to npm` step due to the name-similarity rejection (the build itself was clean). v1.0.1 is otherwise identical in shipped behavior.
+
 ## v1.0.0 — 2026-04-30
 
 ### Added

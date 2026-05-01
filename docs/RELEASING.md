@@ -121,10 +121,10 @@ Watch the run at `https://github.com/<owner>/niato/actions/workflows/release.yml
 ### 5. Verify on npm
 
 ```bash
-npm view niato@X.Y.Z
+npm view @amanasmuei/niato@X.Y.Z
 ```
 
-Should show the new version. Public consumers can now `npm i niato@X.Y.Z`.
+Should show the new version. Public consumers can now `npm i @amanasmuei/niato@X.Y.Z`.
 
 ---
 
@@ -138,7 +138,7 @@ If the CI publish fails (lockfile drift, registry transient error, etc.) and you
 
 The workflow re-runs against the same tag.
 
-> Note: npm forbids re-publishing the same version. If the prior publish *did* succeed but CI reported failure (e.g. a step after publish failed), you cannot re-publish; bump to `X.Y.Z+1` instead. `npm view niato@X.Y.Z` confirms whether the version landed on the registry.
+> Note: npm forbids re-publishing the same version. If the prior publish *did* succeed but CI reported failure (e.g. a step after publish failed), you cannot re-publish; bump to `X.Y.Z+1` instead. `npm view @amanasmuei/niato@X.Y.Z` confirms whether the version landed on the registry.
 
 ---
 
@@ -189,6 +189,6 @@ Then add to the `Publish to npm` step in `release.yml`:
 run: npm publish --access public --provenance --tag next
 ```
 
-Or use `--tag rc` / `--tag beta` per your channel naming. The default `--tag latest` is what the workflow uses today; consumers running `npm i niato` get `latest`.
+Or use `--tag rc` / `--tag beta` per your channel naming. The default `--tag latest` is what the workflow uses today; consumers running `npm i @amanasmuei/niato` get `latest`.
 
 A more polished setup is a separate workflow file (`release-prerelease.yml`) keyed on tag patterns like `v*-rc.*`. Defer until you actually need pre-releases.
