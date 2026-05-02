@@ -305,84 +305,101 @@ export function createNiato(options: NiatoOptions): Niato {
       userInput,
     });
 
-    logger.log("info", "turn start", {
-      sessionId: session.id,
-      turnId,
-      turn: session.metrics.turnCount + 1,
-    });
+    // Wrap the post-turn_start body so any throw (classifier, orchestrator,
+    // trace builder) emits a terminal turn_failed event before re-raising.
+    // Without this the consumer (LivePanel) would see turn_start with no
+    // matching terminal signal and stay in the running state. session.started
+    // is intentionally flipped INSIDE the try after a successful
+    // orchestratorRun, preserving the existing invariant that a thrown
+    // turn never leaves the session in a resume-but-not-yet-started state.
+    try {
+      logger.log("info", "turn start", {
+        sessionId: session.id,
+        turnId,
+        turn: session.metrics.turnCount + 1,
+      });
 
-    const classification = await classifier.classify(userInput);
-    logger.log("debug", "classification", { classification });
-    onEvent({ type: "classified", classification });
+      const classification = await classifier.classify(userInput);
+      logger.log("debug", "classification", { classification });
+      onEvent({ type: "classified", classification });
 
-    // First turn of a session uses sessionId; subsequent turns use resume.
-    // The SDK's Options.sessionId and Options.resume are mutually exclusive.
-    const sessionArg = session.started
-      ? { resume: session.id }
-      : { sessionId: session.id };
+      // First turn of a session uses sessionId; subsequent turns use resume.
+      // The SDK's Options.sessionId and Options.resume are mutually exclusive.
+      const sessionArg = session.started
+        ? { resume: session.id }
+        : { sessionId: session.id };
 
-    const canUseTool: CanUseTool | undefined =
-      options.approval !== undefined
-        ? buildCanUseTool(options.approval, turnId)
-        : undefined;
+      const canUseTool: CanUseTool | undefined =
+        options.approval !== undefined
+          ? buildCanUseTool(options.approval, turnId)
+          : undefined;
 
-    const orchestratorResult = await orchestratorRun({
-      userInput,
-      classification,
-      packs: options.packs,
-      hooks: orchestratorHooks,
-      cwd: NIATO_SDK_SESSIONS_DIR,
-      onEvent,
-      logger,
-      ...(canUseTool !== undefined ? { canUseTool } : {}),
-      ...sessionArg,
-      ...(options.persona !== undefined ? { persona: options.persona } : {}),
-      ...(memoryPreamble !== undefined && memoryPreamble.length > 0
-        ? { memoryPreamble }
-        : {}),
-    });
+      const orchestratorResult = await orchestratorRun({
+        userInput,
+        classification,
+        packs: options.packs,
+        hooks: orchestratorHooks,
+        cwd: NIATO_SDK_SESSIONS_DIR,
+        onEvent,
+        logger,
+        ...(canUseTool !== undefined ? { canUseTool } : {}),
+        ...sessionArg,
+        ...(options.persona !== undefined ? { persona: options.persona } : {}),
+        ...(memoryPreamble !== undefined && memoryPreamble.length > 0
+          ? { memoryPreamble }
+          : {}),
+      });
 
-    // Flip the started flag AFTER a successful turn so a thrown orchestrator
-    // (or any pre-turn rejection like NiatoBudgetExceededError) doesn't
-    // leave the session in an inconsistent resume-but-not-yet-started state.
-    session.started = true;
+      // Flip the started flag AFTER a successful turn so a thrown
+      // orchestrator (or any pre-turn rejection like
+      // NiatoBudgetExceededError) doesn't leave the session in an
+      // inconsistent resume-but-not-yet-started state.
+      session.started = true;
 
-    const endedAt = Date.now();
-    const trace = buildTurnRecord({
-      sessionId: session.id,
-      turnId,
-      classification,
-      messages: orchestratorResult.messages,
-      startedAt: new Date(startedAt).toISOString(),
-      latencyMs: endedAt - startedAt,
-    });
-    // Single source of truth for per-session aggregates: turnCount,
-    // cumulative cost / latency, hook counts, error count all live in
-    // session.metrics and are folded in by updateSessionMetrics.
-    updateSessionMetrics(session.metrics, trace);
-    logger.log("info", "turn", { ...trace });
+      const endedAt = Date.now();
+      const trace = buildTurnRecord({
+        sessionId: session.id,
+        turnId,
+        classification,
+        messages: orchestratorResult.messages,
+        startedAt: new Date(startedAt).toISOString(),
+        latencyMs: endedAt - startedAt,
+      });
+      // Single source of truth for per-session aggregates: turnCount,
+      // cumulative cost / latency, hook counts, error count all live in
+      // session.metrics and are folded in by updateSessionMetrics.
+      updateSessionMetrics(session.metrics, trace);
+      logger.log("info", "turn", { ...trace });
 
-    if (options.onTurnComplete !== undefined) {
-      try {
-        await options.onTurnComplete(trace);
-      } catch (err) {
-        // Telemetry callbacks must never break user flows. Log at warn
-        // level and continue — the user still gets their turn result.
-        logger.log("warn", "onTurnComplete callback threw", {
-          error: err instanceof Error ? err.message : String(err),
-        });
+      if (options.onTurnComplete !== undefined) {
+        try {
+          await options.onTurnComplete(trace);
+        } catch (err) {
+          // Telemetry callbacks must never break user flows. Log at warn
+          // level and continue — the user still gets their turn result.
+          logger.log("warn", "onTurnComplete callback threw", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
       }
+
+      onEvent({ type: "turn_complete", trace });
+
+      return {
+        result: orchestratorResult.result,
+        classification,
+        session,
+        messages: orchestratorResult.messages,
+        trace,
+      };
+    } catch (err) {
+      onEvent({
+        type: "turn_failed",
+        turnId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
     }
-
-    onEvent({ type: "turn_complete", trace });
-
-    return {
-      result: orchestratorResult.result,
-      classification,
-      session,
-      messages: orchestratorResult.messages,
-      trace,
-    };
   }
 
   return {

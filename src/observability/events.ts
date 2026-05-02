@@ -13,6 +13,7 @@ export type NiatoEvent =
   | NiatoToolResultEvent
   | NiatoApprovalRequestedEvent
   | NiatoApprovalResolvedEvent
+  | NiatoTurnFailedEvent
   | NiatoTurnCompleteEvent;
 
 export interface NiatoTurnStartEvent {
@@ -81,6 +82,19 @@ export interface NiatoApprovalResolvedEvent {
   // User-supplied (or hook-supplied) explanation. `undefined` when the
   // user just hit a key without typing a reason.
   reason: string | undefined;
+}
+
+export interface NiatoTurnFailedEvent {
+  type: "turn_failed";
+  // The turnId from the matching turn_start. Lets consumers correlate
+  // the failure to the right in-flight turn (LivePanel resets the panel
+  // for that turnId; useLiveEvents.push then advances state out of the
+  // running phase).
+  turnId: string;
+  // Stringified error message — the original Error object is not
+  // serializable across the synchronous emit boundary in a stable shape.
+  // Producer responsibility: `err instanceof Error ? err.message : String(err)`.
+  error: string;
 }
 
 export interface NiatoTurnCompleteEvent {
