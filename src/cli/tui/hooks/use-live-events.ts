@@ -34,9 +34,10 @@ export interface UseLiveEvents {
 // concurrent pending entries (its internal Map keys by approvalId), this
 // hook surfaces only the most-recent request as pendingApproval. The
 // LivePanel renders one prompt at a time. This is safe today because
-// the SDK's canUseTool fires serially per orchestrator turn (one
-// specialist runs at a time per CLAUDE.md §6); if concurrent specialists
-// are ever introduced, change pendingApproval to
+// the SDK's canUseTool callback is invoked one tool-use at a time, and
+// the current Domain Pack design dispatches a single specialist per
+// orchestrator turn. If concurrent specialists are ever introduced (or
+// the SDK ever batches canUseTool calls), change pendingApproval to
 // `Map<approvalId, ApprovalRequest>` or an explicit queue.
 export function useLiveEvents(channel: ApprovalChannel): UseLiveEvents {
   const [events, setEvents] = useState<NiatoEvent[]>([]);
