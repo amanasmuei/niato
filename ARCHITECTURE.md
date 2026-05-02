@@ -389,7 +389,9 @@ Hooks are *enforcement*, not logging. Every pack that does writes registers at l
 - **`postToolUse`** — record what changed, scan for secret leakage, compute audit hash.
 - **`stop`** — final pass over the response before returning to the user.
 
-Hooks are simple typed functions that return `{ action: "allow" | "block", reason?: string }`. Reasons surface to the agent so it can replan.
+Hooks return SDK `HookCallbackOutput` shapes. PreToolUse hooks set `hookSpecificOutput.permissionDecision: "allow" | "deny" | "ask"` plus an optional `permissionDecisionReason` that surfaces to the agent (or to the user via the LivePanel approval prompt — see Phase 4.5). The "ask" decision routes through the SDK's `Options.canUseTool` callback for human approval; Niato's defensive default (`headlessDenyCanUseTool` in `src/core/compose.ts`) auto-denies when no approval channel is wired, so the safety posture stays explicit in headless deployments.
+
+**Inline approval via `canUseTool`.** Hooks may return `permissionDecision: "ask"` (alongside `"allow"` and `"deny"`). The SDK then calls the `Options.canUseTool` callback with the hook's `decisionReason`, letting the runtime route the decision to a human. Niato's `compose.ts` always wires a `canUseTool`: when `NiatoOptions.approval` is set, requests flow to a TUI `ApprovalChannel` resolved by keypress (Phase 4.5); otherwise a built-in `headlessDenyCanUseTool` auto-denies. Pack hooks like `support.dollar_limit` use `"ask"` to gate writes — over-threshold refunds pause for human approval in the TUI, and auto-deny in headless contexts (CI, batch processors, eval harnesses).
 
 ### Validators
 
@@ -583,6 +585,8 @@ This is the rollout I'd recommend when you decide to start coding. Each phase en
 **Phase 3 — Hooks and guardrails.** Wire up the global hook framework. Add input validators. Add cost-limit hook.
 
 **Phase 4 — First domain pack.** Ship one real pack (Support or Dev Tools, whichever is higher value) end to end with its own MCP, skills, prompts, and evals. Run in production behind a feature flag.
+
+**Phase 4.5 — Live introspection panel.** TUI surface that streams `NiatoEvent`s during a turn: specialist dispatches, tool calls, results, and inline approval prompts driven by `permissionDecision: "ask"` hooks routed through the SDK's `canUseTool` callback. Headless deployments fall back to a built-in `canUseTool` that auto-denies any `ask` decision (see `src/core/compose.ts`'s `headlessDenyCanUseTool`), so the deny-on-ask safety posture is explicit and SDK-version-independent. In-process only — no exporter. Validates the event-stream shape before Phase 7's export work.
 
 **Phase 5 — Second domain pack.** Validate the pack abstraction by adding the second one. Most issues with the abstraction surface here.
 

@@ -64,7 +64,7 @@ The package is published as `niato`. The entry-point factory is `createNiato(...
 ## What to NOT do
 
 - Don't add a fourth domain pack until the first three are stable.
-- Don't add observability tooling beyond console logs in Phase 1–2. Real tracing comes in Phase 7.
+- Don't add observability tooling beyond console logs and the Phase 4.5 LivePanel surface in Phase 1–2. Real *export* tracing (OTel, dashboards, alerts) comes in Phase 7. The LivePanel is in-process introspection only — no exporter, no telemetry sink.
 - Don't load real credentials or MCP servers in tests. Use stub adapters.
 - Don't create new top-level directories without discussion.
 - Don't change the architectural invariants in this file or in `ARCHITECTURE.md` without flagging the change explicitly.
