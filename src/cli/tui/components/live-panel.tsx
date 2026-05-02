@@ -111,21 +111,28 @@ export function LivePanel({
   onDeny,
 }: LivePanelProps): React.ReactElement {
   const rows = buildRows(events);
-  // Approval keypress handler. Only fires when an approval is pending so
-  // 'a' / 'd' are inert during normal operation. Note: this `useInput` is
-  // a sibling of TextInput's `useInput` in the parent screen — Ink has no
-  // first-capture-wins focus model, so both handlers see every keystroke.
-  // While `pendingApproval === undefined` this handler is a no-op and
-  // typing flows through to TextInput as expected. Behavior with a
-  // pending approval is documented in the session screen.
-  useInput((input) => {
-    if (pendingApproval === undefined) return;
-    if (input === "a" && onApprove !== undefined) {
-      onApprove(pendingApproval.approvalId);
-    } else if (input === "d" && onDeny !== undefined) {
-      onDeny(pendingApproval.approvalId);
-    }
-  });
+  // Approval keypress handler. Belt-and-suspenders gating:
+  //   • Framework gate: `isActive: pendingApproval !== undefined` — while
+  //     no approval is pending, Ink doesn't even register the handler,
+  //     which avoids sibling-capture races against TextInput's `useInput`
+  //     (Ink has no first-capture-wins focus model — the parent screen
+  //     pairs this by flipping TextInput's own `isActive` prop to false
+  //     while pending, so 'a'/'d' don't both resolve the prompt AND land
+  //     in the draft buffer).
+  //   • Type-narrowing gate: the inner `if (pendingApproval === undefined)
+  //     return;` is the safety net that lets TS narrow `pendingApproval`
+  //     for the dereference below. Keep both.
+  useInput(
+    (input) => {
+      if (pendingApproval === undefined) return;
+      if (input === "a" && onApprove !== undefined) {
+        onApprove(pendingApproval.approvalId);
+      } else if (input === "d" && onDeny !== undefined) {
+        onDeny(pendingApproval.approvalId);
+      }
+    },
+    { isActive: pendingApproval !== undefined },
+  );
   return (
     <Box flexDirection="column">
       {rows.map((row) => (

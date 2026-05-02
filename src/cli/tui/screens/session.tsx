@@ -146,6 +146,17 @@ export function Session({
 
   const allTurns: TurnState[] = [...replayedTurns, ...session.turns];
 
+  // In-flight or post-completion: panel stays mounted as long as the
+  // turn is running or has produced visible state. Including "classifying"
+  // closes the flicker gap between submit and the first turn_start event
+  // landing in live.events — useNiatoSession.run() flips phase to
+  // "classifying" synchronously before awaiting runStream, so without this
+  // the panel disappears for one render on cold-start classification.
+  const showLivePanel =
+    session.phase === "classifying" ||
+    session.phase === "dispatching" ||
+    live.events.length > 0;
+
   return (
     <Box flexDirection="column" paddingX={1}>
       <Box marginBottom={1}>
@@ -163,7 +174,7 @@ export function Session({
         assistantLabel={companion.name.toLowerCase()}
       />
 
-      {(session.phase === "dispatching" || live.events.length > 0) && (
+      {showLivePanel && (
         <Box marginTop={1}>
           <LivePanel
             events={live.events}
@@ -179,6 +190,12 @@ export function Session({
           value={draft}
           placeholder="type your message..."
           onChange={setDraft}
+          // Modally suspend text capture while an approval is pending so
+          // the user's 'a'/'d' keystrokes only resolve the prompt and
+          // don't also land in the draft buffer. Paired with LivePanel's
+          // `isActive: pendingApproval !== undefined` for symmetric
+          // framework-level gating.
+          isActive={live.pendingApproval === undefined}
           onSubmit={(v) => {
             if (v.trim().length === 0) return;
             setDraft("");
