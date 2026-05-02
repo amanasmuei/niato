@@ -25,9 +25,24 @@ interface ToolRow {
 
 // Folds the flat NiatoEvent[] timeline into a hierarchical tree:
 // one row per specialist_dispatched, with each tool_call grouped
-// under its parent. tool_result events update the matching tool row's
-// result field by toolUseId (later events overwrite earlier — Task 1's
-// dedupe-by-toolUseId contract for blocked-tool surface duplicates).
+// under its parent. tool_result events update the matching tool row.
+//
+// Silent-drop semantics (intentional, not bugs):
+//
+//   1. tool_call with `parentToolUseId` not in the rows map: dropped.
+//      The orchestrator's allowedTools is ["Agent"] (CLAUDE.md §1) so
+//      orphan top-level tool calls should never reach this fold. If
+//      they do, hiding them is honest — we have nowhere to render them.
+//
+//   2. tool_result with `toolUseId` not in toolById: dropped. SDK
+//      message ordering is assumed to deliver tool_call before its
+//      result. Reconnection / replay scenarios that violate this are
+//      out of scope for Phase 4.5.
+//
+//   3. Multiple tool_results for the same toolUseId: blocked is
+//      sticky — once a row is blocked, later "error" / "ok" results
+//      for the same toolUseId do NOT downgrade it. See the inline
+//      comment in the tool_result branch below.
 function buildRows(events: NiatoEvent[]): SpecialistRow[] {
   const rows: SpecialistRow[] = [];
   const byId = new Map<string, SpecialistRow>();
@@ -55,7 +70,17 @@ function buildRows(events: NiatoEvent[]): SpecialistRow[] {
     } else if (e.type === "tool_result") {
       const row = toolById.get(e.toolUseId);
       if (row !== undefined) {
-        row.result = { outcome: e.outcome, reason: e.reason };
+        // "blocked" is sticky: once denied by a hook, an error result for
+        // the same toolUseId is the underlying call's own failure and
+        // must not downgrade the row's status. Otherwise UI users see a
+        // refund "succeed" or "error" when it was actually blocked by
+        // policy. Hooks-as-enforcement (CLAUDE.md §5) means blocked is
+        // load-bearing.
+        if (row.result?.outcome === "blocked") {
+          // Skip — keep the existing blocked status.
+        } else {
+          row.result = { outcome: e.outcome, reason: e.reason };
+        }
       }
     }
   }
@@ -87,14 +112,18 @@ export function LivePanel({
             const isLast = idx === row.tools.length - 1;
             const branch = isLast ? "└─" : "├─";
             return (
-              <Box key={tool.toolUseId}>
-                <Text color="gray">{`  ${branch} `}</Text>
-                {tickFor(tool.result?.outcome)}
-                <Text>{` ${tool.name}`}</Text>
-                <Text color="gray">{` ${tool.inputPreview}`}</Text>
+              <Box key={tool.toolUseId} flexDirection="column">
+                <Box>
+                  <Text color="gray">{`  ${branch} `}</Text>
+                  {tickFor(tool.result?.outcome)}
+                  <Text>{` ${tool.name}`}</Text>
+                  <Text color="gray">{` ${tool.inputPreview}`}</Text>
+                </Box>
                 {tool.result?.outcome === "blocked" &&
                   tool.result.reason !== undefined && (
-                    <Text color="yellow">{`  blocked: ${tool.result.reason}`}</Text>
+                    <Box>
+                      <Text color="yellow">{`     blocked: ${tool.result.reason}`}</Text>
+                    </Box>
                   )}
               </Box>
             );

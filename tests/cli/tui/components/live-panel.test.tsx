@@ -88,4 +88,58 @@ describe("LivePanel", () => {
     expect(out).toMatch(/\[a\]|allow/i);
     expect(out).toMatch(/\[d\]|deny/i);
   });
+
+  it("blocked is sticky: an error result after blocked does NOT downgrade the row", () => {
+    const blockedFirst: NiatoEvent = {
+      type: "tool_result",
+      toolUseId: "tu_2",
+      outcome: "blocked",
+      preview: '{"amount_usd":600}',
+      reason: "over $500 limit",
+    };
+    const errorAfter: NiatoEvent = {
+      type: "tool_result",
+      toolUseId: "tu_2",
+      outcome: "error",
+      preview: "stripe API failed",
+      reason: undefined,
+    };
+    const { lastFrame } = render(
+      <LivePanel
+        events={[dispatched, toolCall, blockedFirst, errorAfter]}
+        pendingApproval={undefined}
+      />,
+    );
+    const out = lastFrame() ?? "";
+    // Still shows the blocked marker + reason — the error result was
+    // ignored because blocked beats error.
+    expect(out).toMatch(/⊘|blocked/);
+    expect(out).toContain("over $500 limit");
+    expect(out).not.toContain("stripe API failed");
+  });
+
+  it("renders without crashing for an empty events array", () => {
+    const { lastFrame } = render(
+      <LivePanel events={[]} pendingApproval={undefined} />,
+    );
+    // No crash, no rows. Empty render is acceptable — just not undefined.
+    expect(lastFrame()).toBeDefined();
+  });
+
+  it("drops a tool_call whose parentToolUseId has no matching specialist", () => {
+    const orphanToolCall: NiatoEvent = {
+      type: "tool_call",
+      parentToolUseId: "tu_nonexistent",
+      toolUseId: "tu_orphan",
+      toolName: "Read",
+      inputPreview: '{"file_path":"/orphan"}',
+    };
+    const { lastFrame } = render(
+      <LivePanel events={[orphanToolCall]} pendingApproval={undefined} />,
+    );
+    const out = lastFrame() ?? "";
+    // No specialist → no row → tool name not rendered.
+    expect(out).not.toContain("Read");
+    expect(out).not.toContain("orphan");
+  });
 });
