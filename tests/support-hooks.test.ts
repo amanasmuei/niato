@@ -43,6 +43,19 @@ function getPreToolUseDeny(output: HookJSONOutput): DenyOutcome | undefined {
   return { decision: "deny", reason: hso.permissionDecisionReason ?? "" };
 }
 
+interface AskOutcome {
+  decision: "ask";
+  reason: string;
+}
+
+function getPreToolUseAsk(output: HookJSONOutput): AskOutcome | undefined {
+  if (!("hookSpecificOutput" in output)) return undefined;
+  const hso = output.hookSpecificOutput;
+  if (hso.hookEventName !== "PreToolUse") return undefined;
+  if (hso.permissionDecision !== "ask") return undefined;
+  return { decision: "ask", reason: hso.permissionDecisionReason ?? "" };
+}
+
 const noopOptions = { signal: new AbortController().signal };
 
 // ---------- PII detection helpers ----------
@@ -165,7 +178,7 @@ describe("dollarLimit factory", () => {
     expect(result).toEqual({ continue: true });
   });
 
-  it("denies a refund exactly at the threshold (>=, not >)", async () => {
+  it("asks for approval on a refund exactly at the threshold (>=, not >)", async () => {
     const result = await hook(
       preToolUseInput({
         tool_name: SupportStubTools.issue_refund,
@@ -174,10 +187,10 @@ describe("dollarLimit factory", () => {
       "tool-use-2",
       noopOptions,
     );
-    expect(getPreToolUseDeny(result)?.reason).toMatch(/human approval/i);
+    expect(getPreToolUseAsk(result)?.reason).toMatch(/exceeds/i);
   });
 
-  it("denies a refund above the threshold", async () => {
+  it("asks for approval on a refund above the threshold", async () => {
     const result = await hook(
       preToolUseInput({
         tool_name: SupportStubTools.issue_refund,
@@ -186,9 +199,9 @@ describe("dollarLimit factory", () => {
       "tool-use-3",
       noopOptions,
     );
-    const deny = getPreToolUseDeny(result);
-    expect(deny?.reason).toContain("$250.00");
-    expect(deny?.reason).toContain("$20.00");
+    const ask = getPreToolUseAsk(result);
+    expect(ask?.reason).toContain("$250.00");
+    expect(ask?.reason).toContain("$20.00");
   });
 
   it("passes through when the amount field is missing", async () => {
@@ -233,6 +246,6 @@ describe("dollarLimit factory", () => {
       "tool-use-6",
       noopOptions,
     );
-    expect(getPreToolUseDeny(result)).toBeDefined();
+    expect(getPreToolUseAsk(result)).toBeDefined();
   });
 });

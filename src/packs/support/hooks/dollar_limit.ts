@@ -3,11 +3,13 @@ import {
   type HookCallbackMatcher,
 } from "@anthropic-ai/claude-agent-sdk";
 
-// Pack-scoped PreToolUse hook factory. Scoped to a single tool by name via
-// the matcher field — see ARCHITECTURE.md §7.2's refundApprovalGate /
-// dollarLimitHook. Phase 4 collapses those into one factory: the threshold
-// IS the gate. Refunds at or above `autoApproveBelow` are denied with a
-// reason that surfaces back to the orchestrator, which routes to escalate.
+// Pack-scoped PreToolUse hook factory. Phase 4.5: refunds at or above
+// `autoApproveBelow` return permissionDecision: 'ask', which the SDK
+// routes to Options.canUseTool — typically a TUI ApprovalChannel for
+// inline approval (see src/guardrails/approval-channel.ts and the
+// LivePanel keypress flow). Headless deployments without canUseTool
+// wired will see the SDK default-deny 'ask' decisions, preserving the
+// prior safety posture exactly.
 
 export interface DollarLimitOptions {
   tool: string;
@@ -46,8 +48,8 @@ export function dollarLimit(
       return Promise.resolve({
         hookSpecificOutput: {
           hookEventName: "PreToolUse",
-          permissionDecision: "deny",
-          permissionDecisionReason: `Refund of $${amount.toFixed(2)} requires human approval (auto-approve threshold is $${options.autoApproveBelow.toFixed(2)}). Forward to escalate.`,
+          permissionDecision: "ask",
+          permissionDecisionReason: `Refund of $${amount.toFixed(2)} exceeds auto-approve threshold of $${options.autoApproveBelow.toFixed(2)} — confirm to proceed.`,
         },
       });
     }
