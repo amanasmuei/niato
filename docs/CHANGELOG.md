@@ -2,6 +2,18 @@
 
 All notable changes to Niato, since v0.2.0 (the first publishable release).
 
+## v1.0.4 — 2026-05-02
+
+### Added
+- **Eval baselines committed for all three packs** (`src/packs/{generic,support,dev-tools}/evals/baseline.json`). Closes README backlog item #1 — the CI eval gate is now active. Baseline floors:
+  - `generic`: 20/20
+  - `support`: 23/25
+  - `dev_tools`: 25/25
+
+### Fixed
+- **Classifier robustness on OAuth path.** Added `allowedTools: []` so the classifier can't reach for tools on action-phrased inputs (`"fix the bug"`, `"run the test suite"`); raised `maxTurns` to 20 to give the SDK's structured-output flow generous headroom under OAuth. API-key path still completes in 1 turn — the cap is a ceiling, not a target.
+- **Eval runner records classifier failures as failed cases instead of aborting the suite.** A flaky single case must not invalidate the other 24. `EvalCaseResult` gains an optional `error?: string` field; `runPackEvals` now wraps each `classify()` in try/catch.
+
 ## v1.0.3 — 2026-05-01
 
 ### Fixed

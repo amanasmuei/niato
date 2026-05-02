@@ -17,6 +17,7 @@ export interface EvalCaseResult {
   case: EvalCase;
   actual: { domain: string; intent: string; confidence: number };
   passed: boolean;
+  error?: string;
 }
 
 export interface EvalReport {
@@ -41,19 +42,32 @@ export async function runPackEvals(opts: {
   const cases = loadCases(opts.casesPath);
   const results: EvalCaseResult[] = [];
   for (const c of cases) {
-    const actual = await opts.classifier.classify(c.input);
-    const passed =
-      actual.domain === c.expected.domain &&
-      actual.intent === c.expected.intent;
-    results.push({
-      case: c,
-      actual: {
-        domain: actual.domain,
-        intent: actual.intent,
-        confidence: actual.confidence,
-      },
-      passed,
-    });
+    try {
+      const actual = await opts.classifier.classify(c.input);
+      const passed =
+        actual.domain === c.expected.domain &&
+        actual.intent === c.expected.intent;
+      results.push({
+        case: c,
+        actual: {
+          domain: actual.domain,
+          intent: actual.intent,
+          confidence: actual.confidence,
+        },
+        passed,
+      });
+    } catch (err) {
+      // Classifier-level errors (SDK timeouts, max-turn caps, transient
+      // network failures) are recorded as failed cases rather than
+      // aborting the whole run. The eval suite is a quality signal — one
+      // flaky case must not invalidate the other 19.
+      results.push({
+        case: c,
+        actual: { domain: "", intent: "", confidence: 0 },
+        passed: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
   const passed = results.filter((r) => r.passed).length;
   return {
