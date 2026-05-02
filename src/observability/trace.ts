@@ -59,8 +59,18 @@ export function extractGuardrailsTriggered(messages: SDKMessage[]): string[] {
   const triggered: string[] = [];
   for (const msg of messages) {
     if (msg.type !== "result") continue;
-    if (msg.subtype !== "success" && msg.subtype !== "error_during_execution")
-      continue;
+    // Every SDKResultMessage subtype (success + the four error subtypes)
+    // carries `permission_denials: SDKPermissionDenial[]` — no subtype
+    // filter needed. Previously this narrowed only on `success` +
+    // `error_during_execution`, silently dropping denials when a turn
+    // ended via the turn / cost / structured-output cap and blanking
+    // the audit trail.
+    //
+    // The runtime Array.isArray guard tolerates SDK shape drift (a
+    // malformed result missing the field at runtime) without throwing
+    // — kept here to match the original defensive contract. The cast
+    // is needed because the SDK type marks `permission_denials` as
+    // non-optional, so direct access would let TS strip the guard.
     const denials = (
       msg as { permission_denials?: { tool_name: string }[] }
     ).permission_denials;

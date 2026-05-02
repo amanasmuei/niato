@@ -80,7 +80,11 @@ describe("extractGuardrailsTriggered", () => {
     expect(extractGuardrailsTriggered(messages)).toEqual(["Edit"]);
   });
 
-  it("ignores other result subtypes (e.g. error_max_turns)", () => {
+  it("collects denials from error_max_turns result (turn-budget exhaustion)", () => {
+    // SDKResultErrorMaxTurns carries `permission_denials` per the SDK
+    // type union (sdk.d.ts SDKResultError). Prior behavior dropped these
+    // denials silently, blanking the audit trail when a turn ran out of
+    // turns after a hook had already blocked a tool call.
     const messages = [
       {
         type: "result",
@@ -88,7 +92,33 @@ describe("extractGuardrailsTriggered", () => {
         permission_denials: [{ tool_name: "Bash", tool_use_id: "tu_1" }],
       } as unknown as SDKMessage,
     ];
-    expect(extractGuardrailsTriggered(messages)).toEqual([]);
+    expect(extractGuardrailsTriggered(messages)).toEqual(["Bash"]);
+  });
+
+  it("collects denials from error_max_budget_usd result (cost-cap exhaustion)", () => {
+    const messages = [
+      {
+        type: "result",
+        subtype: "error_max_budget_usd",
+        permission_denials: [
+          { tool_name: "mcp__support__issue_refund", tool_use_id: "tu_b1" },
+        ],
+      } as unknown as SDKMessage,
+    ];
+    expect(extractGuardrailsTriggered(messages)).toEqual([
+      "mcp__support__issue_refund",
+    ]);
+  });
+
+  it("collects denials from error_max_structured_output_retries result", () => {
+    const messages = [
+      {
+        type: "result",
+        subtype: "error_max_structured_output_retries",
+        permission_denials: [{ tool_name: "Edit", tool_use_id: "tu_e1" }],
+      } as unknown as SDKMessage,
+    ];
+    expect(extractGuardrailsTriggered(messages)).toEqual(["Edit"]);
   });
 
   it("tolerates messages that lack permission_denials entirely", () => {

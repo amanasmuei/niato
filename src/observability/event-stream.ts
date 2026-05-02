@@ -104,10 +104,13 @@ export function messagesToEvents(messages: SDKMessage[]): NiatoEvent[] {
         });
       }
     } else if (msg.type === "result") {
-      if (msg.subtype !== "success" && msg.subtype !== "error_during_execution")
-        continue;
-      const denials = msg.permission_denials;
-      for (const d of denials) {
+      // Mirrors trace.ts extractGuardrailsTriggered: every
+      // SDKResultMessage subtype carries `permission_denials`, so no
+      // subtype filter is needed — any result that ended a turn after a
+      // hook denial must surface those denials as blocked tool_result
+      // events. If the SDK adds a result subtype without the field, the
+      // direct field access fails to typecheck and forces a re-look.
+      for (const d of msg.permission_denials) {
         if (typeof d.tool_use_id !== "string") continue;
         events.push({
           type: "tool_result",

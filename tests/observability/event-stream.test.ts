@@ -174,6 +174,35 @@ describe("messagesToEvents", () => {
     ]);
   });
 
+  it("emits blocked tool_result events when result subtype is error_max_turns (budget exhaustion)", () => {
+    // Mirrors the trace.ts narrowing: SDKResultErrorMaxTurns carries
+    // `permission_denials`, so the translator must surface those denials
+    // as blocked tool_result events even when the turn ended by hitting
+    // the turn cap rather than success.
+    const messages: SDKMessage[] = [
+      {
+        type: "result",
+        subtype: "error_max_turns",
+        permission_denials: [
+          {
+            tool_name: "mcp__support__issue_refund",
+            tool_use_id: "tu_b1",
+            tool_input: { amount_usd: 800 },
+          },
+        ],
+        modelUsage: {},
+        total_cost_usd: 0,
+      } as unknown as SDKMessage,
+    ];
+    const events = messagesToEvents(messages);
+    const blocked = events.find((e) => e.type === "tool_result");
+    expect(blocked).toMatchObject({
+      type: "tool_result",
+      toolUseId: "tu_b1",
+      outcome: "blocked",
+    });
+  });
+
   it("treats legacy 'Task' tool name as a specialist dispatch alias for 'Agent'", () => {
     const messages: SDKMessage[] = [
       asAssistantMessage(null, [
