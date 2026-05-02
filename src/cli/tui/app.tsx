@@ -33,12 +33,22 @@ import {
 } from "./store/sessions.js";
 import { type Niato } from "../../core/compose.js";
 import { type Logger } from "../../observability/log.js";
+import { type ApprovalChannel } from "../../guardrails/approval-channel.js";
 
 export interface AppProps {
   companionPath?: string;
   sessionsDir?: string;
   authPath?: string;
-  niatoFactory: (logger: Logger) => Niato;
+  // Factory accepts an optional ApprovalChannel so the session screen can
+  // wire its own per-screen channel into the constructed Niato. Headless
+  // / non-TUI callers pass `undefined` (the SDK's default-deny behavior
+  // for permissionDecision: 'ask' kicks in then). TS function-param
+  // contravariance keeps zero-arg test fixtures (e.g.
+  // `() => makeStubNiato([])`) assignable to this signature.
+  niatoFactory: (
+    logger: Logger,
+    approval: ApprovalChannel | undefined,
+  ) => Niato;
   version: string;
 }
 

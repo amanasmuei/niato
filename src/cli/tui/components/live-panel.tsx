@@ -1,11 +1,19 @@
 import React from "react";
-import { Box, Text } from "ink";
+import { Box, Text, useInput } from "ink";
 import { type NiatoEvent } from "../../../observability/events.js";
 import { type ApprovalRequest } from "../../../guardrails/approval-channel.js";
 
 export interface LivePanelProps {
   events: NiatoEvent[];
   pendingApproval: ApprovalRequest | undefined;
+  // Keypress callbacks. Both are optional so the read-only render mode
+  // (used by the existing live-panel.test.tsx fixtures and any future
+  // headless caller) keeps working without supplying handlers. The
+  // explicit `| undefined` on the outer is required by the project's
+  // `exactOptionalPropertyTypes: true` so callers may pass `undefined`
+  // explicitly without a conditional spread.
+  onApprove?: ((approvalId: string) => void) | undefined;
+  onDeny?: ((approvalId: string) => void) | undefined;
 }
 
 interface SpecialistRow {
@@ -99,8 +107,25 @@ function tickFor(
 export function LivePanel({
   events,
   pendingApproval,
+  onApprove,
+  onDeny,
 }: LivePanelProps): React.ReactElement {
   const rows = buildRows(events);
+  // Approval keypress handler. Only fires when an approval is pending so
+  // 'a' / 'd' are inert during normal operation. Note: this `useInput` is
+  // a sibling of TextInput's `useInput` in the parent screen — Ink has no
+  // first-capture-wins focus model, so both handlers see every keystroke.
+  // While `pendingApproval === undefined` this handler is a no-op and
+  // typing flows through to TextInput as expected. Behavior with a
+  // pending approval is documented in the session screen.
+  useInput((input) => {
+    if (pendingApproval === undefined) return;
+    if (input === "a" && onApprove !== undefined) {
+      onApprove(pendingApproval.approvalId);
+    } else if (input === "d" && onDeny !== undefined) {
+      onDeny(pendingApproval.approvalId);
+    }
+  });
   return (
     <Box flexDirection="column">
       {rows.map((row) => (

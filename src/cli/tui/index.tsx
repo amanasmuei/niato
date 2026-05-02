@@ -14,6 +14,7 @@ import { type Logger } from "../../observability/log.js";
 import { applyPersistedAuthEnv } from "./auth-env.js";
 import { renderAuthError } from "../../cli-error-render.js";
 import { resolvePacks } from "./resolve-packs.js";
+import { type ApprovalChannel } from "../../guardrails/approval-channel.js";
 
 function readVersion(): string {
   try {
@@ -43,10 +44,14 @@ async function main(): Promise<void> {
     process.env,
   );
 
-  const niatoFactory = (logger: Logger): Niato =>
+  const niatoFactory = (
+    logger: Logger,
+    approval: ApprovalChannel | undefined,
+  ): Niato =>
     createNiato({
       packs,
       logger,
+      ...(approval !== undefined ? { approval } : {}),
       ...(companion !== null
         ? { persona: buildPersonaFromCompanion(companion) }
         : {}),
