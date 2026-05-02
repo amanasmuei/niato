@@ -3,7 +3,14 @@ import { type Niato, type NiatoTurn } from "../../../core/compose.js";
 import { type IntentResult } from "../../../core/classifier/types.js";
 import { type TurnRecord } from "../../../observability/trace.js";
 import { type Logger } from "../../../observability/log.js";
+import { type NiatoEvent } from "../../../observability/events.js";
 import { classifyError } from "../../error-classify.js";
+
+// Module-scoped noop sink for `runStream` when no consumer is listening.
+// Defined outside the hook so it's a stable reference (not recreated per
+// render), and explicitly typed so strict TS doesn't infer `() => {}`
+// (which the project's ESLint config rejects).
+const noopEvent: (event: NiatoEvent) => void = () => undefined;
 
 export type SessionPhase =
   | "idle"
@@ -46,6 +53,7 @@ export function useNiatoSession(
   factory: (logger: Logger) => Niato,
   sessionId: string,
   onTurnComplete?: (turn: TurnState) => void,
+  onEvent?: (event: NiatoEvent) => void,
 ): UseNiato {
   const [phase, setPhase] = useState<SessionPhase>("idle");
   const [classification, setClassification] = useState<
@@ -103,7 +111,11 @@ export function useNiatoSession(
         },
       ]);
       try {
-        const turnResult: NiatoTurn = await niato.run(input, sessionId);
+        const turnResult: NiatoTurn = await niato.runStream(
+          input,
+          sessionId,
+          onEvent ?? noopEvent,
+        );
         const next: TurnState = {
           input,
           output: turnResult.result,
@@ -137,7 +149,7 @@ export function useNiatoSession(
         onTurnComplete?.(errorTurn);
       }
     },
-    [niato, sessionId, onTurnComplete],
+    [niato, sessionId, onTurnComplete, onEvent],
   );
 
   return { phase, classification, trace, turns, run };
