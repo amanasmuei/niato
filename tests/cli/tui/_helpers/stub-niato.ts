@@ -65,6 +65,7 @@ export function makeStubNiato(responses: StubResponse[]): Niato {
           plan: ["generic.explain"],
           specialists: [],
           costUsd: 0.001,
+          startedAt: "2026-01-01T00:00:00.000Z",
           latencyMs: 50,
           tokensByModel: {},
           outcome: "success",

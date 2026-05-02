@@ -175,12 +175,14 @@ export function createNiato(options: NiatoOptions): Niato {
       // leave the session in an inconsistent resume-but-not-yet-started state.
       session.started = true;
 
+      const endedAt = Date.now();
       const trace = buildTurnRecord({
         sessionId: session.id,
         turnId,
         classification,
         messages: orchestratorResult.messages,
-        latencyMs: Date.now() - startedAt,
+        startedAt: new Date(startedAt).toISOString(),
+        latencyMs: endedAt - startedAt,
       });
       // Single source of truth for per-session aggregates: turnCount,
       // cumulative cost / latency, hook counts, error count all live in

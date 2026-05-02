@@ -11,6 +11,7 @@ const fakeTrace: TurnRecord = {
   plan: ["generic.explain"],
   specialists: [],
   costUsd: 0.0034,
+  startedAt: "2026-01-01T00:00:00.000Z",
   latencyMs: 2100,
   tokensByModel: {
     "claude-sonnet-4-6-20260101": {

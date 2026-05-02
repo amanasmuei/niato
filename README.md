@@ -329,7 +329,7 @@ Three layers, none of which require an external dependency:
 
 **`onTurnComplete` callback** — `(trace: TurnRecord) => void | Promise<void>`. Fires after each turn's trace is built. Wire OTel / Datadog / Honeycomb / your own time-series store from here. Errors thrown by the callback are caught and logged at `warn` level; telemetry never breaks user flows.
 
-OpenTelemetry-style distributed tracing isn't bundled — that's a per-deployment decision.
+OpenTelemetry-style distributed tracing isn't bundled — that's a per-deployment decision. A copy-paste OTel adapter recipe (Datadog included via OTLP receiver) lives at [`docs/otel-adapter.ts`](./docs/otel-adapter.ts) with the explainer at [`docs/otel-adapter.md`](./docs/otel-adapter.md).
 
 </details>
 
@@ -475,10 +475,15 @@ git push origin master vX.Y.Z
 
 **Backlog (post-1.0):**
 
-- Eval baselines (`pnpm eval <pack> --write-baseline`) — needs API budget; CI gate is wired and waiting.
-- Long-term cross-session memory — per-user KV store (Level 3 in `ARCHITECTURE.md` §9).
-- Distributed tracing adapters — `onTurnComplete` is the integration point; OTel/Datadog adapters are per-deployment.
-- `pr_creator` specialist + `protectedBranchGate` hook — needs real GitHub MCP wiring.
+- Real GitHub MCP wiring for `pr_creator` (currently stubbed via `dev_tools_github_stub`).
+
+**Shipped (post-1.0):**
+
+- Eval baselines committed for all three packs (`generic` 20/20, `support` 23/25, `dev_tools` 25/25). CI gate active via `pnpm eval <pack> --baseline`.
+- Long-term cross-session memory — file-based default at `~/.niato/memory/<userId>.json` with a thin `MemoryStore` interface for plugging in Redis/Postgres later.
+- TUI multi-turn history dashboard — scrollable session view in the launcher.
+- OpenTelemetry adapter — copy-paste recipe at [`docs/otel-adapter.ts`](./docs/otel-adapter.ts) + explainer at [`docs/otel-adapter.md`](./docs/otel-adapter.md). Datadog covered via the Agent's OTLP receiver — same code.
+- `pr_creator` specialist + `protectedBranchGate` hook (with stub MCP — see backlog above for real wiring).
 
 ---
 

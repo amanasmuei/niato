@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { extractGuardrailsTriggered } from "../src/index.js";
+import { buildTurnRecord } from "../src/observability/trace.js";
 
 // Synthetic SDK result messages that match the SDKResultSuccess /
 // SDKResultError shape. We only set the fields extractGuardrailsTriggered
@@ -103,5 +104,28 @@ describe("extractGuardrailsTriggered", () => {
 
   it("ignores assistant / user / system messages", () => {
     expect(extractGuardrailsTriggered([assistantMsg()])).toEqual([]);
+  });
+});
+
+describe("buildTurnRecord — startedAt", () => {
+  // Locks the contract that `TurnRecord.startedAt` is the ISO 8601 wall-clock
+  // start instant threaded in from compose.ts (not reconstructed). OTel /
+  // Datadog adapters use this to set span start time.
+  it("propagates startedAt verbatim and is parseable as ISO 8601", () => {
+    const startedAt = "2026-05-01T12:34:56.789Z";
+    const trace = buildTurnRecord({
+      sessionId: "s1",
+      turnId: "t1",
+      classification: {
+        domain: "generic",
+        intent: "explain",
+        confidence: 0.9,
+      },
+      messages: [],
+      startedAt,
+      latencyMs: 1234,
+    });
+    expect(trace.startedAt).toBe(startedAt);
+    expect(Number.isNaN(Date.parse(trace.startedAt))).toBe(false);
   });
 });

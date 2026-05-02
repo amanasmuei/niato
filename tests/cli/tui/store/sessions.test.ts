@@ -21,6 +21,7 @@ const fakeTrace = (): TurnRecord => ({
   plan: ["generic.explain"],
   specialists: [{ name: "generic.explain", toolCalls: 0 }],
   costUsd: 0.001,
+  startedAt: "2026-01-01T00:00:00.000Z",
   latencyMs: 1234,
   tokensByModel: {},
   outcome: "success",

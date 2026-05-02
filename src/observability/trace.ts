@@ -21,6 +21,11 @@ export interface TurnRecord {
   specialists: TurnSpecialistRecord[];
   tokensByModel: Record<string, TurnTokenUsage>;
   costUsd: number;
+  // ISO 8601 wall-clock time at which this turn began (i.e. just before
+  // classification ran). Latency = `endedAt - startedAt`. Surfaced so
+  // observability adapters (OTel spans, log timestamps) can use the real
+  // start instant instead of reconstructing it from latencyMs.
+  startedAt: string;
   latencyMs: number;
   outcome: "success" | "error";
   guardrailsTriggered: string[];
@@ -93,6 +98,7 @@ export interface BuildTurnRecordArgs {
   turnId: string;
   classification: IntentResult;
   messages: SDKMessage[];
+  startedAt: string;
   latencyMs: number;
 }
 
@@ -150,6 +156,7 @@ export function buildTurnRecord(args: BuildTurnRecordArgs): TurnRecord {
     })),
     tokensByModel,
     costUsd,
+    startedAt: args.startedAt,
     latencyMs: args.latencyMs,
     outcome,
     guardrailsTriggered: extractGuardrailsTriggered(args.messages),
