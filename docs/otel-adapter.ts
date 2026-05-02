@@ -1,3 +1,5 @@
+// @ts-nocheck — copy-paste recipe; types resolve when pasted into a
+// project that has installed `@opentelemetry/api` and `@aman_asmuei/niato`.
 // Niato → OpenTelemetry adapter — copy-paste recipe.
 //
 // This file is documentation, not bundled code. It is NOT part of the npm

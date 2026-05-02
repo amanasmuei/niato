@@ -58,6 +58,7 @@ function turnLine(args: {
       specialists: args.plan.map((n) => ({ name: n, toolCalls: 0 })),
       tokensByModel: {},
       costUsd: args.costUsd,
+      startedAt: args.ts,
       latencyMs: args.latencyMs,
       outcome: args.outcome,
       guardrailsTriggered: [],

@@ -2,6 +2,30 @@
 
 All notable changes to Niato, since v0.2.0 (the first publishable release).
 
+## v1.1.0 — 2026-05-02
+
+Four post-1.0 backlog items shipped together. All additive — no breaking changes.
+
+### Added
+- **`pr_creator` specialist + `protectedBranchGate` hook** in the dev-tools pack — closes the last unimplemented promise in ARCHITECTURE.md §7.3.
+  - `dev_tools_github_stub` MCP server with a `create_pull_request` tool (mirrors `support_stub`); real GitHub MCP wiring deferred to a future release.
+  - `protectedBranchGate({ allowedBranches? })` — denies PRs targeting `main`, `master`, `^release/` by default; deny-with-reason pattern surfaces to the orchestrator for replan/escalate.
+  - 5 new eval cases for the `create_pr` intent.
+- **Long-term cross-session memory** — file-based default at `~/.niato/memory/<userId>.json` with a thin `MemoryStore` interface (Redis/Postgres pluggable later — deviation from ARCHITECTURE.md §9 noted in that doc).
+  - Opt-in via `createNiato({ memory: { ... } })`; backward compatible.
+  - Explicit `niato.remember(facts: string[])` API; auto-extraction deferred to v1.x.
+  - Soft cap of 100 facts (~4KB); overflow truncates oldest + emits warn log.
+  - System prompt composition: persona → memory → ORCHESTRATOR_PROMPT.
+  - Architectural invariant #4 enforced by structural test: specialists never see memory; only the orchestrator does.
+  - New env var: `NIATO_USER_ID` (defaults to `"default"`).
+- **TUI multi-turn history dashboard** — new `History` screen between "Resume last" and "Settings" in the launcher. Reads from existing JSONL session storage (`~/.niato/sessions/`); no new dependencies, manual windowed scroll via Ink `useInput`.
+- **OpenTelemetry adapter** — copy-paste recipe at `docs/otel-adapter.ts` + explainer at `docs/otel-adapter.md`. No new package, no peer-dep — `TurnRecord` is the public contract; users wire it through `onTurnComplete`. Datadog covered via the OTel receiver — same code.
+
+### Changed
+- `TurnRecord` gains a `startedAt: string` (ISO 8601) field for accurate OTel span start timestamps. Threaded from `compose.ts`'s existing `Date.now()` start instant.
+- `Niato` interface gains a `remember(facts: string[]): Promise<void>` method when `memory` is configured (no-op otherwise).
+- README `Backlog (post-1.0)` reduced to one item (real GitHub MCP wiring); shipped items moved to a new `Shipped (post-1.0)` section.
+
 ## v1.0.4 — 2026-05-02
 
 ### Added

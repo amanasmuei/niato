@@ -1,6 +1,6 @@
 {
   "name": "@aman_asmuei/niato",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "Intent-routing agent on the Claude Agent SDK. Niato — \"intention\", from the Malay/Indonesian niat — declares before it acts.",
   "type": "module",
   "main": "./dist/index.js",
