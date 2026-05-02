@@ -68,4 +68,106 @@ describe("ApprovalChannel", () => {
       ch.resolve("never-issued", { decision: "allow", reason: undefined });
     }).not.toThrow();
   });
+
+  it("late subscriber sees currently-pending requests", () => {
+    const ch = createApprovalChannel();
+    void ch.request(
+      {
+        approvalId: "tu_late",
+        toolName: "x",
+        toolInput: {},
+        reason: "r",
+      },
+      new AbortController().signal,
+    );
+    const seen: string[] = [];
+    ch.subscribe((req) => {
+      seen.push(req.approvalId);
+    });
+    expect(seen).toEqual(["tu_late"]);
+  });
+
+  it("rejects duplicate approvalId rather than abandoning the prior request", async () => {
+    const ch = createApprovalChannel();
+    const first = ch.request(
+      {
+        approvalId: "tu_dup",
+        toolName: "x",
+        toolInput: {},
+        reason: "r",
+      },
+      new AbortController().signal,
+    );
+    const second = ch.request(
+      {
+        approvalId: "tu_dup",
+        toolName: "x",
+        toolInput: {},
+        reason: "r",
+      },
+      new AbortController().signal,
+    );
+    await expect(second).rejects.toThrow(/duplicate/i);
+    // First is still pending — resolve it normally.
+    ch.resolve("tu_dup", { decision: "allow", reason: undefined });
+    const result = await first;
+    expect(result).toEqual({ decision: "allow", reason: undefined });
+  });
+
+  it("listener exceptions do not block subsequent listeners or leak pending", async () => {
+    const ch = createApprovalChannel();
+    const seen: string[] = [];
+    ch.subscribe(() => {
+      throw new Error("first listener exploded");
+    });
+    ch.subscribe((req) => {
+      seen.push(req.approvalId);
+    });
+    const reqPromise = ch.request(
+      {
+        approvalId: "tu_exc",
+        toolName: "x",
+        toolInput: {},
+        reason: "r",
+      },
+      new AbortController().signal,
+    );
+    expect(seen).toEqual(["tu_exc"]);
+    ch.resolve("tu_exc", { decision: "deny", reason: "no" });
+    const result = await reqPromise;
+    expect(result).toEqual({ decision: "deny", reason: "no" });
+  });
+
+  it("abort fired after resolve is a no-op (does not corrupt pending state)", async () => {
+    const ch = createApprovalChannel();
+    const ctrl = new AbortController();
+    const first = ch.request(
+      {
+        approvalId: "tu_first",
+        toolName: "x",
+        toolInput: {},
+        reason: "r",
+      },
+      ctrl.signal,
+    );
+    ch.resolve("tu_first", { decision: "allow", reason: undefined });
+    await first;
+    // A second request reusing the same id is allowed because the first
+    // settled cleanly. Abort the (now-stale) original signal — must not
+    // touch the second pending entry.
+    const ctrl2 = new AbortController();
+    const second = ch.request(
+      {
+        approvalId: "tu_first",
+        toolName: "x",
+        toolInput: {},
+        reason: "r",
+      },
+      ctrl2.signal,
+    );
+    ctrl.abort();
+    ch.resolve("tu_first", { decision: "deny", reason: "blocked" });
+    const result = await second;
+    expect(result).toEqual({ decision: "deny", reason: "blocked" });
+  });
 });
