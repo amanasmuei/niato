@@ -43,7 +43,34 @@ describe("App shell", () => {
     }
   });
 
-  it("companion present → opens on launcher", () => {
+  function writeAuthFile(dir: string, contents: unknown): string {
+    const p = join(dir, "auth.json");
+    writeFileSync(p, JSON.stringify(contents));
+    return p;
+  }
+
+  it("companion + auth present → opens on launcher", () => {
+    const companionPath = setupCompanionFile(root);
+    const authPath = writeAuthFile(root, { mode: "subscription" });
+    const { lastFrame } = render(
+      <App
+        companionPath={companionPath}
+        sessionsDir={join(root, "sessions")}
+        authPath={authPath}
+        niatoFactory={() => makeStubNiato([])}
+        version="0.0.0-test"
+      />,
+    );
+    expect(lastFrame()).toContain("New session");
+  });
+
+  it("companion present but auth missing → opens on first-run (the niato login bug fix)", () => {
+    // Repro of the bug aman hit: ran `niato login` (which historically did
+    // not write auth.json), then `niato`. App opened on launcher → user
+    // resumed last session → render-time throw inside useNiatoSession
+    // because resolveAuthMode found no env vars. With auth gating, the App
+    // routes to first-run instead, never letting Session mount without
+    // auth.
     const companionPath = setupCompanionFile(root);
     const { lastFrame } = render(
       <App
@@ -54,7 +81,7 @@ describe("App shell", () => {
         version="0.0.0-test"
       />,
     );
-    expect(lastFrame()).toContain("New session");
+    expect(lastFrame()).toContain("Welcome to Niato");
   });
 
   it("companion missing → opens on first-run", () => {

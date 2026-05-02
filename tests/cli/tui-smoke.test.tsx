@@ -35,6 +35,13 @@ describe("TUI end-to-end smoke", () => {
       createdAt: "2026-04-28T00:00:00Z",
     };
     writeFileSync(join(root, "companion.json"), `${JSON.stringify(companion)}\n`);
+    // Auth gating (added with the niato-login UX fix): App now refuses to
+    // open the launcher without auth. Smoke covers the post-first-run
+    // happy path, so seed a subscription auth file.
+    writeFileSync(
+      join(root, "auth.json"),
+      `${JSON.stringify({ mode: "subscription" })}\n`,
+    );
   });
   afterEach(() => {
     rmSync(root, { recursive: true, force: true });

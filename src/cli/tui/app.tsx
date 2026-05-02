@@ -106,7 +106,14 @@ export function App({
     }
   }, [sessionsDir]);
 
-  const initialScreen = companion === null ? "first-run" : "launcher";
+  // Gate the launcher on BOTH companion and auth being present. Without the
+  // auth gate, a user who ran `niato login` (which writes auth.json after
+  // the fix in cli/login.ts but didn't pre-fix) and had a leftover companion
+  // would land on the launcher → resume → mount Session → factory throw
+  // inside useState. Routing to first-run when auth is missing keeps the
+  // throw out of render and lets the user pick a path.
+  const initialScreen =
+    companion === null || auth === null ? "first-run" : "launcher";
   const stack = useScreenStack({ name: initialScreen, props: {} });
 
   const recent = loadMostRecent(sessionsDir);
@@ -187,6 +194,12 @@ export function App({
   };
 
   const onApiKeySubmit = (apiKey: string): void => {
+    // TODO(follow-up): persisting the api-key state file is necessary but
+    // not sufficient. resolveAuthMode reads ANTHROPIC_API_KEY from process.env;
+    // applyPersistedAuthEnv only bridges subscription mode (api-key was meant
+    // to "carry that path on its own" via the shell env, but in-app entry
+    // bypasses the shell). Likely fix: bridge api-key → process.env here, or
+    // extend applyPersistedAuthEnv to set ANTHROPIC_API_KEY for api-key files.
     const next: AuthState = { mode: "api-key", apiKey };
     saveAuth(next, authPath);
     setAuth(next);
