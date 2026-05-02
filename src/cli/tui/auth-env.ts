@@ -1,4 +1,5 @@
-import { loadAuth } from "./store/auth.js";
+import { existsSync } from "node:fs";
+import { defaultAuthPath, loadAuth } from "./store/auth.js";
 
 // Bridges the TUI's persisted auth choice to the orchestrator's
 // schema-validated auth resolution (src/core/config.ts:resolveAuthMode).
@@ -17,4 +18,21 @@ export function applyPersistedAuthEnv(authPath?: string): void {
   if (persisted.mode === "subscription") {
     process.env["NIATO_AUTH"] = "subscription";
   }
+}
+
+// Boolean predicate used by the TUI's initial-screen gate: is ANY auth
+// path configured (file OR env var)? Mirrors resolveAuthMode's set of
+// recognized inputs without throwing — gating wants a yes/no, not the
+// chosen mode. Without this, users who set CLAUDE_CODE_OAUTH_TOKEN or
+// ANTHROPIC_API_KEY in their shell would be unnecessarily routed
+// through first-run, then back out, on every launch.
+export function isAuthConfigured(authPath?: string): boolean {
+  const env = process.env;
+  const tok = env["CLAUDE_CODE_OAUTH_TOKEN"];
+  if (typeof tok === "string" && tok.length > 0) return true;
+  const ah = env["NIATO_AUTH"];
+  if (typeof ah === "string" && ah.length > 0) return true;
+  const key = env["ANTHROPIC_API_KEY"];
+  if (typeof key === "string" && key.length > 0) return true;
+  return existsSync(authPath ?? defaultAuthPath());
 }

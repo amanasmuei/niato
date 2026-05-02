@@ -12,6 +12,7 @@ const ENTRIES = {
   tui: "cli/tui/index.js",
   chat: "cli-chat.js",
   login: "cli-login.js",
+  "setup-token": "cli-setup-token.js",
 } as const;
 
 export function resolveDispatch(args: readonly string[]): DispatchResult {
@@ -40,11 +41,13 @@ export function helpText(): string {
     "  niato tui             same",
     "  niato chat [--reset]  legacy multi-turn REPL",
     "  niato login           OAuth subscription auth (wraps `claude /login`)",
+    "  niato setup-token     long-lived token for CI/headless (wraps `claude setup-token`)",
     "  niato --version       print version",
     "  niato --help          show this help",
     "",
-    "Auth (set one in your shell):",
-    "  ANTHROPIC_API_KEY=sk-ant-...    developer API path (recommended)",
-    "  NIATO_AUTH=subscription       Claude subscription path (review ToS)",
+    "Auth (pick one):",
+    "  niato login                       interactive subscription (recommended for laptops)",
+    "  CLAUDE_CODE_OAUTH_TOKEN=...       long-lived subscription token (CI / headless)",
+    "  ANTHROPIC_API_KEY=sk-ant-...      developer API path (per-token billing)",
   ].join("\n");
 }

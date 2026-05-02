@@ -61,7 +61,11 @@ Requires **Node 20.6+**. Three commands to your first turn:
 npm i -g @aman_asmuei/niato
 
 # 2. Authenticate (pick one)
-export ANTHROPIC_API_KEY=sk-ant-...        # developer API path (recommended)
+niato login                                # Claude subscription (browser OAuth, recommended for laptops)
+# — or —
+niato setup-token                          # long-lived token, then `export CLAUDE_CODE_OAUTH_TOKEN=...` (CI / headless)
+# — or —
+export ANTHROPIC_API_KEY=sk-ant-...        # developer API path (per-token billing)
 
 # 3. Run
 niato
@@ -71,7 +75,7 @@ That's it. The TUI walks you through companion setup on first run — no shell e
 
 > **Prefer not to install globally?** `npx @aman_asmuei/niato` works the same way.
 >
-> **Subscription auth instead of API key?** See [Authentication](#authentication) — `NIATO_AUTH=subscription` opts in (with ToS caveats).
+> **Which auth path?** Laptop / personal: `niato login`. CI / headless / containers: `niato setup-token`. Production / multi-user: `ANTHROPIC_API_KEY`. See [Authentication](#authentication) for the full table and ToS notes.
 
 ---
 
@@ -183,20 +187,21 @@ For the full design, see [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ## Authentication
 
-Two paths into the Anthropic API; pick whichever matches your setup. Both flow through the Agent SDK's auto-resolution.
+Three paths into the Anthropic API; pick whichever matches your setup. All flow through the Agent SDK's auto-resolution — Niato just classifies which one is in use for logging and gates startup until at least one is configured.
 
 | Path | Trigger | Cost | Use case |
 | ---- | ------- | ---- | -------- |
-| **API key** (default) | `ANTHROPIC_API_KEY=sk-ant-...` | per-token against your API budget | Production, CI, multi-user, anywhere a developer API key is the right call |
-| **Subscription** (opt-in) | `NIATO_AUTH=subscription` + prior `claude /login` | $0 — runs against Claude Max quota | Personal, single-user, on your own machine. *Read the ToS note below.* |
-| **None** | neither set | n/a | `NiatoAuthError` thrown at startup with actionable message |
+| **Subscription (interactive)** | `niato login` (sets `NIATO_AUTH=subscription`, uses `~/.claude/`) | $0 — Claude Max quota | Laptop, single user, hands-on. Default for `npx @aman_asmuei/niato`. *ToS note below.* |
+| **Subscription (token)** | `niato setup-token` → `export CLAUDE_CODE_OAUTH_TOKEN=ct-...` | $0 — Claude Max quota | CI, scripts, containers, anywhere a browser login isn't available. Long-lived (1 year). *Same ToS note.* |
+| **API key** | `ANTHROPIC_API_KEY=sk-ant-...` | per-token against your API budget | Production, multi-user, or anywhere a developer API key is the right call |
+| **None** | none set | n/a | `NiatoAuthError` at startup with actionable message |
 
-`createNiato()` logs the chosen path at startup. If both are configured, `NIATO_AUTH=subscription` wins — explicit subscription opt-in overrides the API key.
+`createNiato()` logs the chosen path at startup. Priority when more than one is configured: **`CLAUDE_CODE_OAUTH_TOKEN` > `NIATO_AUTH=subscription` > `ANTHROPIC_API_KEY`** — the most specific credential wins, and explicit subscription intent overrides a leftover API key.
 
 <details>
 <summary><strong>Note on subscription auth (read before non-personal use)</strong></summary>
 
-The Agent SDK supports OAuth (subscription) authentication, and Niato can use it via `NIATO_AUTH=subscription`. This path is **opt-in only**: without that env var, Niato uses the developer API path or fails clearly at startup. We made this change because:
+The Agent SDK supports OAuth (subscription) authentication via two transport mechanisms — `~/.claude/` session storage (driven by `NIATO_AUTH=subscription`) and the `CLAUDE_CODE_OAUTH_TOKEN` env var (long-lived token from `claude setup-token`). Niato exposes both. They are **opt-in only**: without one of those signals, Niato uses the developer API path or fails clearly at startup. We made this change because:
 
 - The Agent SDK explicitly supports OAuth (`ApiKeySource = 'oauth'` in its types).
 - What's *not* explicit is whether Anthropic's Consumer Terms / Acceptable Use Policy permit using your Claude Max subscription to power applications other than Claude Code itself.

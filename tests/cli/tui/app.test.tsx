@@ -28,19 +28,27 @@ const ENTER = "\r";
 describe("App shell", () => {
   let root: string;
   let savedApiKey: string | undefined;
+  let savedNiatoAuth: string | undefined;
+  let savedOauthToken: string | undefined;
 
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), "niato-app-"));
     mkdirSync(join(root, "sessions"), { recursive: true });
     savedApiKey = process.env["ANTHROPIC_API_KEY"];
+    savedNiatoAuth = process.env["NIATO_AUTH"];
+    savedOauthToken = process.env["CLAUDE_CODE_OAUTH_TOKEN"];
+    delete process.env["ANTHROPIC_API_KEY"];
+    delete process.env["NIATO_AUTH"];
+    delete process.env["CLAUDE_CODE_OAUTH_TOKEN"];
   });
   afterEach(() => {
     rmSync(root, { recursive: true, force: true });
-    if (savedApiKey === undefined) {
-      delete process.env["ANTHROPIC_API_KEY"];
-    } else {
-      process.env["ANTHROPIC_API_KEY"] = savedApiKey;
-    }
+    if (savedApiKey === undefined) delete process.env["ANTHROPIC_API_KEY"];
+    else process.env["ANTHROPIC_API_KEY"] = savedApiKey;
+    if (savedNiatoAuth === undefined) delete process.env["NIATO_AUTH"];
+    else process.env["NIATO_AUTH"] = savedNiatoAuth;
+    if (savedOauthToken === undefined) delete process.env["CLAUDE_CODE_OAUTH_TOKEN"];
+    else process.env["CLAUDE_CODE_OAUTH_TOKEN"] = savedOauthToken;
   });
 
   function writeAuthFile(dir: string, contents: unknown): string {
@@ -83,6 +91,32 @@ describe("App shell", () => {
     );
     expect(lastFrame()).toContain("Welcome to Niato");
   });
+
+  // Latent regression from the previous niato-login-fix PR (commit 19c8398):
+  // gating on `auth === null` (file only) routed users with shell-level env
+  // var auth through first-run unnecessarily. Each of the three SDK-blessed
+  // env vars should be enough to skip first-run.
+  it.each([
+    ["ANTHROPIC_API_KEY", "sk-test"],
+    ["NIATO_AUTH", "subscription"],
+    ["CLAUDE_CODE_OAUTH_TOKEN", "ct-abc"],
+  ])(
+    "companion present + %s env var (no file) → opens on launcher",
+    (varName, value) => {
+      process.env[varName] = value;
+      const companionPath = setupCompanionFile(root);
+      const { lastFrame } = render(
+        <App
+          companionPath={companionPath}
+          sessionsDir={join(root, "sessions")}
+          authPath={join(root, "auth.json")}
+          niatoFactory={() => makeStubNiato([])}
+          version="0.0.0-test"
+        />,
+      );
+      expect(lastFrame()).toContain("New session");
+    },
+  );
 
   it("companion missing → opens on first-run", () => {
     const { lastFrame } = render(

@@ -32,6 +32,14 @@ describe("resolveDispatch", () => {
     if (result.kind === "entry") expect(result.entry).toBe("cli-login.js");
   });
 
+  it("routes 'setup-token' to cli-setup-token.js", () => {
+    const result = resolveDispatch(["setup-token"]);
+    expect(result.kind).toBe("entry");
+    if (result.kind === "entry") {
+      expect(result.entry).toBe("cli-setup-token.js");
+    }
+  });
+
   it.each([["--version"], ["-v"]])(
     "returns kind=version for %s",
     (flag) => {
@@ -60,7 +68,8 @@ describe("helpText", () => {
     expect(text).toContain("niato tui");
     expect(text).toContain("niato chat");
     expect(text).toContain("niato login");
+    expect(text).toContain("niato setup-token");
     expect(text).toContain("ANTHROPIC_API_KEY");
-    expect(text).toContain("NIATO_AUTH=subscription");
+    expect(text).toContain("CLAUDE_CODE_OAUTH_TOKEN");
   });
 });

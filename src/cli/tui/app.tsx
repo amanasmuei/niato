@@ -24,6 +24,7 @@ import {
   type AuthMode,
   type AuthState,
 } from "./store/auth.js";
+import { isAuthConfigured } from "./auth-env.js";
 import {
   loadMostRecent,
   defaultSessionsDir,
@@ -106,14 +107,13 @@ export function App({
     }
   }, [sessionsDir]);
 
-  // Gate the launcher on BOTH companion and auth being present. Without the
-  // auth gate, a user who ran `niato login` (which writes auth.json after
-  // the fix in cli/login.ts but didn't pre-fix) and had a leftover companion
-  // would land on the launcher → resume → mount Session → factory throw
-  // inside useState. Routing to first-run when auth is missing keeps the
-  // throw out of render and lets the user pick a path.
+  // Gate the launcher on BOTH companion and auth being configured. "auth
+  // configured" means file OR env var (CLAUDE_CODE_OAUTH_TOKEN /
+  // NIATO_AUTH=subscription / ANTHROPIC_API_KEY) — anything resolveAuthMode
+  // would accept. Routing to first-run when nothing is configured keeps
+  // the render-time throw from useNiatoSession out of the launch path.
   const initialScreen =
-    companion === null || auth === null ? "first-run" : "launcher";
+    companion === null || !isAuthConfigured(authPath) ? "first-run" : "launcher";
   const stack = useScreenStack({ name: initialScreen, props: {} });
 
   const recent = loadMostRecent(sessionsDir);
