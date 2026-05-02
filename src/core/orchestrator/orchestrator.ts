@@ -8,6 +8,7 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import { type NiatoEvent } from "../../observability/events.js";
 import { messagesToEvents } from "../../observability/event-stream.js";
+import { type Logger } from "../../observability/log.js";
 import { type DomainPack } from "../../packs/DomainPack.js";
 import {
   type IntentResult,
@@ -55,7 +56,20 @@ export interface OrchestratorInput {
   canUseTool?: CanUseTool | undefined;
   // Test-only DI seam: replace the SDK's query() entry point. Production
   // callers leave this undefined; tests inject an async-iterable stub.
-  queryImpl?: typeof query | undefined;
+  // Narrower than `typeof query` — only the call-and-iterate shape used
+  // by runOrchestrator is required, which lets test stubs avoid casting.
+  queryImpl?:
+    | ((args: {
+        prompt: string;
+        options: Options;
+      }) => AsyncIterable<SDKMessage>)
+    | undefined;
+  // Optional structured logger for observability-callback errors. When
+  // omitted, listener throws are silently swallowed (legacy behavior).
+  // compose.ts threads the Niato-wide logger through so a buggy onEvent
+  // sink (e.g. a React reducer) surfaces in stdout JSON instead of
+  // disappearing.
+  logger?: Logger | undefined;
 }
 
 export interface OrchestratorOutput {
@@ -240,9 +254,15 @@ export async function runOrchestrator(
     if (input.onEvent === undefined) return;
     try {
       input.onEvent(event);
-    } catch {
-      // Observability sinks must never break user flows. Drop the
-      // listener error silently — surfaces in traces if it matters.
+    } catch (err) {
+      // Observability sinks must never break user flows. Log if a
+      // logger is wired (matches compose.ts onTurnComplete handling);
+      // otherwise drop silently for headless test paths.
+      if (input.logger !== undefined) {
+        input.logger.log("warn", "onEvent listener threw", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   };
 
@@ -251,9 +271,11 @@ export async function runOrchestrator(
     options,
   })) {
     messages.push(message);
-    // Translate just this message (with the empty messages-so-far prefix
-    // suppressed by reading only fresh events). Cheap: each SDKMessage
-    // produces O(blocks) NiatoEvents, no cross-message state.
+    // Translator (event-stream.ts) is stateless across messages —
+    // passing one at a time produces the same events as a batch call.
+    // Each SDKMessage produces O(blocks) NiatoEvents. If event-stream
+    // ever gains cross-message correlation (e.g. matching tool_call to
+    // tool_result by id), this loop must switch to accumulate-then-flush.
     for (const event of messagesToEvents([message])) emit(event);
     if (message.type === "result" && message.subtype === "success") {
       finalResult = message.result;

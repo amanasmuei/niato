@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { type query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
   buildOrchestratorOptions,
   runOrchestrator,
@@ -38,7 +38,7 @@ describe("runOrchestrator event streaming", () => {
 // dependency-injection seam: runOrchestrator accepts an optional
 // `queryImpl` field on input, defaulting to the SDK's query.
 describe("runOrchestrator event streaming with stub query", () => {
-  it("invokes onEvent for each emitted event", async () => {
+  it("emits specialist_dispatched per orchestrator Agent dispatch", async () => {
     const stubMessages: SDKMessage[] = [
       {
         type: "assistant",
@@ -80,12 +80,15 @@ describe("runOrchestrator event streaming with stub query", () => {
       onEvent: (e) => {
         events.push(e);
       },
-      // Cast: stub query has the iterable shape SDK consumers use; the
-      // SDK's query() type adds Promise-like helpers we don't exercise.
-      queryImpl: (() => stubQuery()) as unknown as typeof query,
+      queryImpl: () => stubQuery(),
     });
 
-    const types = events.map((e) => e.type);
-    expect(types).toContain("specialist_dispatched");
+    expect(events).toEqual([
+      {
+        type: "specialist_dispatched",
+        toolUseId: "tu_1",
+        specialist: "generic.action",
+      },
+    ]);
   });
 });
