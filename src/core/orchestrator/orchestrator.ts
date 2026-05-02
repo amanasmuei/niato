@@ -1,10 +1,13 @@
 import {
   query,
   type AgentDefinition,
+  type CanUseTool,
   type McpServerConfig,
   type Options,
   type SDKMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+import { type NiatoEvent } from "../../observability/events.js";
+import { messagesToEvents } from "../../observability/event-stream.js";
 import { type DomainPack } from "../../packs/DomainPack.js";
 import {
   type IntentResult,
@@ -41,6 +44,18 @@ export interface OrchestratorInput {
   // ~/.claude/projects/<cwd>/ heuristic; overriding here gives stable
   // per-session storage independent of the user's shell cwd.
   cwd?: string;
+  // Live event sink. Called once per NiatoEvent translated from the
+  // streaming SDKMessage iterator. Errors thrown by onEvent are caught
+  // and ignored — observability must never break user flows.
+  onEvent?: ((event: NiatoEvent) => void) | undefined;
+  // Bridge to the SDK's permission system. Hooks returning
+  // permissionDecision: 'ask' cause the SDK to call this. Pass through
+  // to a TUI ApprovalChannel for inline approval; omit for headless runs
+  // (in which case 'ask' decisions are denied by the SDK default).
+  canUseTool?: CanUseTool | undefined;
+  // Test-only DI seam: replace the SDK's query() entry point. Production
+  // callers leave this undefined; tests inject an async-iterable stub.
+  queryImpl?: typeof query | undefined;
 }
 
 export interface OrchestratorOutput {
@@ -206,6 +221,9 @@ export function buildOrchestratorOptions(input: OrchestratorInput): Options {
     ...(input.sessionId !== undefined ? { sessionId: input.sessionId } : {}),
     ...(input.resume !== undefined ? { resume: input.resume } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
+    ...(input.canUseTool !== undefined
+      ? { canUseTool: input.canUseTool }
+      : {}),
   };
   return options;
 }
@@ -216,12 +234,27 @@ export async function runOrchestrator(
   const options = buildOrchestratorOptions(input);
   const messages: SDKMessage[] = [];
   let finalResult = "";
+  const queryFn = input.queryImpl ?? query;
 
-  for await (const message of query({
+  const emit = (event: NiatoEvent): void => {
+    if (input.onEvent === undefined) return;
+    try {
+      input.onEvent(event);
+    } catch {
+      // Observability sinks must never break user flows. Drop the
+      // listener error silently — surfaces in traces if it matters.
+    }
+  };
+
+  for await (const message of queryFn({
     prompt: buildUserMessage(input),
     options,
   })) {
     messages.push(message);
+    // Translate just this message (with the empty messages-so-far prefix
+    // suppressed by reading only fresh events). Cheap: each SDKMessage
+    // produces O(blocks) NiatoEvents, no cross-message state.
+    for (const event of messagesToEvents([message])) emit(event);
     if (message.type === "result" && message.subtype === "success") {
       finalResult = message.result;
     }
