@@ -7,6 +7,7 @@ import {
   type SessionMetrics,
 } from "../../../../src/observability/metrics.js";
 import { type SessionContext } from "../../../../src/memory/session.js";
+import { type NiatoEvent } from "../../../../src/observability/events.js";
 
 export interface StubResponse {
   output: string;
@@ -72,6 +73,26 @@ export function makeStubNiato(responses: StubResponse[]): Niato {
           guardrailsTriggered: [],
         },
       };
+    },
+    runStream(
+      input: string,
+      sessionId: string | undefined,
+      onEvent: (event: NiatoEvent) => void,
+    ): Promise<NiatoTurn> {
+      // Stub: emit a minimal lifecycle event sequence so consumers
+      // exercise the codepath, then delegate to run() for the actual
+      // turn shape. Real intermediate events (classified, tool_*) are
+      // not emitted — the stub Niato is a fixture, not an SDK simulator.
+      onEvent({
+        type: "turn_start",
+        sessionId: sessionId ?? "stub-session",
+        turnId: `t${String(i + 1)}`,
+        userInput: input,
+      });
+      return this.run(input, sessionId).then((turn) => {
+        onEvent({ type: "turn_complete", trace: turn.trace });
+        return turn;
+      });
     },
     metrics(_sessionId): SessionMetrics | undefined {
       return undefined;

@@ -2,8 +2,16 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import {
+  type CanUseTool,
+  type SDKMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 import { type DomainPack } from "../packs/DomainPack.js";
+import { type NiatoEvent } from "../observability/events.js";
+import {
+  type ApprovalChannel,
+  type ApprovalDecision,
+} from "../guardrails/approval-channel.js";
 import { type Classifier, type IntentResult } from "./classifier/types.js";
 import { createSonnetClassifier } from "./classifier/sonnet.js";
 import { runOrchestrator } from "./orchestrator/orchestrator.js";
@@ -86,6 +94,12 @@ export interface NiatoOptions {
   // Internal seam: lets tests substitute the orchestrator runner. Production
   // callers should leave this undefined — it defaults to runOrchestrator.
   orchestratorRunner?: typeof runOrchestrator;
+  // ApprovalChannel wired into the SDK's canUseTool. When set, hooks
+  // returning permissionDecision: 'ask' surface as ApprovalRequests on
+  // this channel; UI consumers (TUI LivePanel) resolve them via keypress.
+  // Omit for headless deployments — the SDK then denies 'ask' decisions
+  // by default, preserving the prior safety posture.
+  approval?: ApprovalChannel | undefined;
 }
 
 export function ensureBudget(
@@ -109,6 +123,17 @@ export interface NiatoTurn {
 
 export interface Niato {
   run(userInput: string, sessionId?: string): Promise<NiatoTurn>;
+  // Streaming variant. Identical to run() except onEvent is invoked for
+  // every NiatoEvent emitted during the turn (turn_start before
+  // classification; classified after; specialist_dispatched / tool_call /
+  // tool_result / approval_* during; turn_complete after the trace is
+  // built). Errors thrown by onEvent are caught and (when the Niato has
+  // a logger) logged at warn — never propagated.
+  runStream(
+    userInput: string,
+    sessionId: string | undefined,
+    onEvent: (event: NiatoEvent) => void,
+  ): Promise<NiatoTurn>;
   // Returns the rolling per-session metrics aggregated across every turn
   // run() has completed for the given session. Returns undefined when the
   // session is unknown (e.g. never created or evicted).
@@ -120,6 +145,48 @@ export interface Niato {
   // configured at createNiato(). Soft-capped at MAX_FACTS / ~4KB; on
   // overflow the oldest facts are dropped with a `warn` log.
   remember(facts: string[]): Promise<void>;
+}
+
+// Builds the canUseTool callback that bridges the SDK's permission
+// system to a TUI-owned ApprovalChannel. Hooks returning
+// permissionDecision: 'ask' cause the SDK to call this with the hook's
+// decisionReason; we forward it to the channel and translate the
+// resolved ApprovalDecision back into the SDK's PermissionResult.
+//
+// The `turnId` is used as a fallback approvalId namespace if the SDK's
+// per-tool toolUseID is missing — that should never happen in practice
+// but defends against future SDK contract drift.
+function buildCanUseTool(
+  channel: ApprovalChannel,
+  turnId: string,
+): CanUseTool {
+  return async (toolName, input, ctx) => {
+    // Cast: ctx.toolUseID is documented as a required string in the SDK
+    // CanUseTool ctx param; we widen to unknown so the runtime
+    // typeof check has type-level meaning and defends against
+    // future SDK contract drift.
+    const ctxToolUseId = (ctx as { toolUseID?: unknown }).toolUseID;
+    const approvalId =
+      typeof ctxToolUseId === "string"
+        ? ctxToolUseId
+        : `${turnId}:${toolName}`;
+    const decision: ApprovalDecision = await channel.request(
+      {
+        approvalId,
+        toolName,
+        toolInput: input,
+        reason: ctx.decisionReason ?? "approval requested",
+      },
+      ctx.signal,
+    );
+    if (decision.decision === "allow") {
+      return { behavior: "allow" };
+    }
+    return {
+      behavior: "deny",
+      message: decision.reason ?? "denied by user",
+    };
+  };
 }
 
 export function createNiato(options: NiatoOptions): Niato {
@@ -201,94 +268,129 @@ export function createNiato(options: NiatoOptions): Niato {
     })();
   }
 
+  // Shared turn body for both run() and runStream(). The only difference
+  // between the two public methods is whether intermediate NiatoEvents
+  // are surfaced — run() passes a noop sink; runStream() forwards them.
+  // Extracted as a closure so it captures the same factory state (logger,
+  // sessions, classifier, orchestratorRun, hooks, memory*) without a
+  // long parameter list at the call sites.
+  async function runInternal(
+    userInput: string,
+    sessionId: string | undefined,
+    onEvent: (event: NiatoEvent) => void,
+  ): Promise<NiatoTurn> {
+    for (const validator of validators) {
+      const result = validator(userInput);
+      if (!result.ok) {
+        throw new NiatoInputRejectedError(result.reason);
+      }
+    }
+
+    const session = sessions.getOrCreate(sessionId);
+    ensureBudget(session, options.costLimitUsd);
+
+    // Make sure the initial memory load (if memory is configured)
+    // has resolved before we compose the system prompt. The promise
+    // is settled after the first turn, so this is a no-op on every
+    // subsequent run().
+    await memoryReady;
+
+    const turnId = randomUUID();
+    const startedAt = Date.now();
+
+    onEvent({
+      type: "turn_start",
+      sessionId: session.id,
+      turnId,
+      userInput,
+    });
+
+    logger.log("info", "turn start", {
+      sessionId: session.id,
+      turnId,
+      turn: session.metrics.turnCount + 1,
+    });
+
+    const classification = await classifier.classify(userInput);
+    logger.log("debug", "classification", { classification });
+    onEvent({ type: "classified", classification });
+
+    // First turn of a session uses sessionId; subsequent turns use resume.
+    // The SDK's Options.sessionId and Options.resume are mutually exclusive.
+    const sessionArg = session.started
+      ? { resume: session.id }
+      : { sessionId: session.id };
+
+    const canUseTool: CanUseTool | undefined =
+      options.approval !== undefined
+        ? buildCanUseTool(options.approval, turnId)
+        : undefined;
+
+    const orchestratorResult = await orchestratorRun({
+      userInput,
+      classification,
+      packs: options.packs,
+      hooks: orchestratorHooks,
+      cwd: NIATO_SDK_SESSIONS_DIR,
+      onEvent,
+      logger,
+      ...(canUseTool !== undefined ? { canUseTool } : {}),
+      ...sessionArg,
+      ...(options.persona !== undefined ? { persona: options.persona } : {}),
+      ...(memoryPreamble !== undefined && memoryPreamble.length > 0
+        ? { memoryPreamble }
+        : {}),
+    });
+
+    // Flip the started flag AFTER a successful turn so a thrown orchestrator
+    // (or any pre-turn rejection like NiatoBudgetExceededError) doesn't
+    // leave the session in an inconsistent resume-but-not-yet-started state.
+    session.started = true;
+
+    const endedAt = Date.now();
+    const trace = buildTurnRecord({
+      sessionId: session.id,
+      turnId,
+      classification,
+      messages: orchestratorResult.messages,
+      startedAt: new Date(startedAt).toISOString(),
+      latencyMs: endedAt - startedAt,
+    });
+    // Single source of truth for per-session aggregates: turnCount,
+    // cumulative cost / latency, hook counts, error count all live in
+    // session.metrics and are folded in by updateSessionMetrics.
+    updateSessionMetrics(session.metrics, trace);
+    logger.log("info", "turn", { ...trace });
+
+    if (options.onTurnComplete !== undefined) {
+      try {
+        await options.onTurnComplete(trace);
+      } catch (err) {
+        // Telemetry callbacks must never break user flows. Log at warn
+        // level and continue — the user still gets their turn result.
+        logger.log("warn", "onTurnComplete callback threw", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    onEvent({ type: "turn_complete", trace });
+
+    return {
+      result: orchestratorResult.result,
+      classification,
+      session,
+      messages: orchestratorResult.messages,
+      trace,
+    };
+  }
+
   return {
     async run(userInput, sessionId) {
-      for (const validator of validators) {
-        const result = validator(userInput);
-        if (!result.ok) {
-          throw new NiatoInputRejectedError(result.reason);
-        }
-      }
-
-      const session = sessions.getOrCreate(sessionId);
-      ensureBudget(session, options.costLimitUsd);
-
-      // Make sure the initial memory load (if memory is configured)
-      // has resolved before we compose the system prompt. The promise
-      // is settled after the first turn, so this is a no-op on every
-      // subsequent run().
-      await memoryReady;
-
-      const turnId = randomUUID();
-      const startedAt = Date.now();
-
-      logger.log("info", "turn start", {
-        sessionId: session.id,
-        turnId,
-        turn: session.metrics.turnCount + 1,
-      });
-
-      const classification = await classifier.classify(userInput);
-      logger.log("debug", "classification", { classification });
-
-      // First turn of a session uses sessionId; subsequent turns use resume.
-      // The SDK's Options.sessionId and Options.resume are mutually exclusive.
-      const sessionArg = session.started
-        ? { resume: session.id }
-        : { sessionId: session.id };
-
-      const orchestratorResult = await orchestratorRun({
-        userInput,
-        classification,
-        packs: options.packs,
-        hooks: orchestratorHooks,
-        cwd: NIATO_SDK_SESSIONS_DIR,
-        ...sessionArg,
-        ...(options.persona !== undefined ? { persona: options.persona } : {}),
-        ...(memoryPreamble !== undefined && memoryPreamble.length > 0
-          ? { memoryPreamble }
-          : {}),
-      });
-
-      // Flip the started flag AFTER a successful turn so a thrown orchestrator
-      // (or any pre-turn rejection like NiatoBudgetExceededError) doesn't
-      // leave the session in an inconsistent resume-but-not-yet-started state.
-      session.started = true;
-
-      const endedAt = Date.now();
-      const trace = buildTurnRecord({
-        sessionId: session.id,
-        turnId,
-        classification,
-        messages: orchestratorResult.messages,
-        startedAt: new Date(startedAt).toISOString(),
-        latencyMs: endedAt - startedAt,
-      });
-      // Single source of truth for per-session aggregates: turnCount,
-      // cumulative cost / latency, hook counts, error count all live in
-      // session.metrics and are folded in by updateSessionMetrics.
-      updateSessionMetrics(session.metrics, trace);
-      logger.log("info", "turn", { ...trace });
-
-      if (options.onTurnComplete !== undefined) {
-        try {
-          await options.onTurnComplete(trace);
-        } catch (err) {
-          // Telemetry callbacks must never break user flows. Log at warn
-          // level and continue — the user still gets their turn result.
-          logger.log("warn", "onTurnComplete callback threw", {
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
-      }
-
-      return {
-        result: orchestratorResult.result,
-        classification,
-        session,
-        messages: orchestratorResult.messages,
-        trace,
-      };
+      return runInternal(userInput, sessionId, () => undefined);
+    },
+    async runStream(userInput, sessionId, onEvent) {
+      return runInternal(userInput, sessionId, onEvent);
     },
     metrics(sessionId) {
       const m = sessions.get(sessionId)?.metrics;
