@@ -17,7 +17,7 @@
 - Keep specialist context windows small and focused.
 - Make every action auditable, reversible where possible, and gated for high-stakes operations.
 - Run in production: rate limits, retries, session resumption, sandboxing, observability.
-- Be cost-efficient: Haiku for classification, Opus for orchestration, Sonnet for specialists.
+- Be cost-efficient: a small/fast model for classification, Opus for orchestration, Sonnet for specialists. (v1.x ships Sonnet 4.6 for the classifier — see §4.)
 
 **Non-goals**
 
@@ -54,7 +54,7 @@ The Python SDK is fully equivalent in capability. Pick Python if your team's cen
 
 | # | Layer | Responsibility |
 |---|---|---|
-| 1 | Ingress | Auth, rate limit, idempotency, payload normalization |
+| 1 | Ingress | Auth, rate limit, idempotency, payload normalization (reserved for hosted-service deployments — see §13; v1.x serves this through the CLI/TUI in `src/cli/`) |
 | 2 | Session and input handling | Resume conversation, load user context |
 | 3 | Intent classifier | Map raw input to `{intent, domain, entities, urgency, confidence}` |
 | 4 | Orchestrator | Plan, dispatch specialists, aggregate results, decide next step |
@@ -74,19 +74,21 @@ The Python SDK is fully equivalent in capability. Pick Python if your team's cen
 
 ## 4. Two-stage routing — *the declaration*
 
-A common mistake is letting the orchestrator do classification *and* planning in one call. That's expensive — Opus burns tokens on triage Haiku could do in 50ms.
+A common mistake is letting the orchestrator do classification *and* planning in one call. That's expensive — Opus burns tokens on triage a smaller, faster model could do in well under a second.
 
 ```
 raw user input
    │
    ▼
-[Haiku classifier]  ──►  { intent, domain, entities, urgency, confidence }
+[Sonnet 4.6 classifier]  ──►  { intent, domain, entities, urgency, confidence }
    │
    ▼
-[Opus orchestrator] ◄── reads classification, picks pack, dispatches specialist
+[Opus 4.7 orchestrator] ◄── reads classification, picks pack, dispatches specialist
 ```
 
 This is Niato's first declaration: the classifier states the intent before any action is taken.
+
+**v1.x classifier model note.** The architecture was originally drafted around Haiku 4.5 for classification. v1.x ships **Sonnet 4.6** instead, called via the Agent SDK's `query()` with structured `outputFormat` rather than the raw Anthropic SDK. The driver is auth unification — using the Agent SDK lets the classifier inherit the same auth resolution as the orchestrator (API key *or* Claude subscription via `claude /login`) instead of being API-key-only. Re-evaluating Haiku for classification is a v1.2+ open question. The "small fast model out-of-band" shape of the architecture is unchanged; only the specific model is.
 
 Confidence policy:
 
@@ -425,7 +427,7 @@ Production agents fail silently without telemetry. Instrument from day one.
       "tokens": { "in": 8400, "out": 720, "model": "claude-sonnet-4-6" }
     }
   ],
-  "tokens_total": { "haiku": 410, "opus": 4580, "sonnet": 9120 },
+  "tokens_total": { "classifier": 410, "opus": 4580, "sonnet": 9120 },
   "cost_usd": 0.13,
   "latency_ms": 3210,
   "outcome": "success",
@@ -447,14 +449,14 @@ Approximate per-turn cost (verify against current pricing):
 
 | Stage | Model | Notes |
 |---|---|---|
-| Classify | Haiku 4.5 | very low; cache the system prompt |
+| Classify | Sonnet 4.6 (v1.x) | low; cache the system prompt. Architecture target is a smaller/faster model — Haiku re-evaluation tracked for v1.2+. |
 | Plan | Opus 4.7 | medium; cache the orchestrator system prompt |
 | Specialist | Sonnet 4.6 | low–medium per call; tool round-trips dominate |
 
 Levers:
 
 - Prompt caching on the orchestrator system prompt (hit rate 80%+ on warm sessions).
-- Use Haiku for the classifier even at scale — the savings compound.
+- Keep the classifier on the smallest model that holds the eval baseline. v1.x picked Sonnet 4.6 for auth unification (Agent SDK supports subscription auth, the raw SDK does not); revisit Haiku once subscription auth is no longer a constraint.
 - Avoid loading whole files when grep would suffice.
 - Set `CLAUDE_CODE_SUBAGENT_MODEL=claude-sonnet-4-6` if you want a global default for all subagents.
 
@@ -466,73 +468,93 @@ Levers:
 niato/
 ├── src/
 │   ├── core/
-│   │   ├── ingress.ts                  # auth, rate limit, idempotency
-│   │   ├── session.ts                  # session resume, long-term memory loader
+│   │   ├── compose.ts                  # createNiato({ packs, hooks, ... })
+│   │   ├── config.ts                   # single typed env loader, fails fast
+│   │   ├── persona.ts                  # companion voice (Casual mode)
+│   │   ├── errors.ts
 │   │   ├── classifier/
-│   │   │   ├── prompt.ts
-│   │   │   └── classify.ts             # Haiku call, returns IntentResult
-│   │   ├── orchestrator/
-│   │   │   ├── prompt.ts
-│   │   │   └── orchestrator.ts         # main Agent SDK loop, dispatches specialists
-│   │   └── compose.ts                  # createNiato({ packs, hooks, ... })
+│   │   │   ├── prompt.ts / prompt.md
+│   │   │   ├── intent-schema.ts        # zod + JSON schema for IntentResult
+│   │   │   ├── types.ts
+│   │   │   ├── stub.ts                 # offline classifier (tests, dev)
+│   │   │   └── sonnet.ts               # Sonnet 4.6 via Agent SDK query()
+│   │   └── orchestrator/
+│   │       ├── prompt.ts / prompt.md
+│   │       └── orchestrator.ts         # main Agent SDK loop, dispatches specialists
 │   │
 │   ├── packs/
 │   │   ├── DomainPack.ts               # interface
 │   │   ├── generic/
-│   │   │   ├── pack.ts
-│   │   │   ├── prompts/
+│   │   │   ├── agents/                 # one AgentDefinition per file
 │   │   │   └── evals/
 │   │   ├── support/
-│   │   │   ├── pack.ts
+│   │   │   ├── agents/
 │   │   │   ├── prompts/
-│   │   │   ├── hooks.ts                # PII redaction, refund approval, dollar limits
+│   │   │   ├── hooks/                  # pii_redaction, dollar_limit, ...
+│   │   │   ├── tools/                  # support_stub MCP (demo only)
 │   │   │   └── evals/
 │   │   └── dev-tools/
-│   │       ├── pack.ts
+│   │       ├── agents/
 │   │       ├── prompts/
-│   │       ├── hooks.ts                # protected branch, sandbox bash, secrets scan
+│   │       ├── hooks/                  # protected_branch_gate, sandbox_bash, secrets_scan
+│   │       ├── tools/                  # dev_tools_github_stub (demo only)
 │   │       └── evals/
 │   │
 │   ├── tools/
-│   │   ├── builtin.ts                  # tool allowlists per agent
-│   │   └── mcp/                        # custom in-process MCP servers
+│   │   └── builtin.ts                  # built-in tool name constants
 │   │
 │   ├── memory/
-│   │   ├── session-store.ts
-│   │   ├── long-term.ts
-│   │   └── skills-loader.ts
+│   │   ├── session.ts
+│   │   └── long-term.ts                # FileMemoryStore default → ~/.niato/memory/
 │   │
 │   ├── guardrails/
-│   │   ├── hooks/                      # global hooks
-│   │   ├── permissions.ts
-│   │   └── validators.ts
+│   │   ├── hooks.ts
+│   │   ├── validators.ts
+│   │   ├── errors.ts
+│   │   └── orchestrator-enforcement.ts # asserts the Agent-only invariant
 │   │
 │   ├── observability/
-│   │   ├── tracing.ts
+│   │   ├── log.ts
 │   │   ├── metrics.ts
-│   │   └── cost.ts
+│   │   └── trace.ts                    # TurnRecord builder; cost is a field on it
 │   │
-│   └── index.ts
+│   ├── evals/
+│   │   ├── runner.ts                   # CLI `pnpm eval <pack>`
+│   │   ├── runPackEvals.ts             # shared per-pack helper
+│   │   └── baseline.ts                 # regression gate vs baseline.json
+│   │
+│   ├── cli/                            # entry surface — Niato is a library + CLI, not HTTP
+│   │   ├── run.ts · dispatch.ts · chat-repl.ts
+│   │   ├── setup-wizard.ts · companion-config.ts
+│   │   ├── persona-builder.ts · error-classify.ts
+│   │   └── tui/                        # Ink: components/ hooks/ screens/ store/
+│   │
+│   └── index.ts                        # public exports
 │
 ├── .claude/
 │   ├── skills/                         # markdown skill files referenced by packs
-│   │   ├── brand-voice/
-│   │   ├── refund-policy/
-│   │   ├── code-conventions/
-│   │   └── pr-template/
 │   └── settings.json
 │
-├── evals/
-│   ├── runner.ts                       # invokes each pack's runEvals()
-│   └── reports/
+├── docs/
+│   └── otel-adapter.{ts,md}            # bring-your-own OpenTelemetry recipe
 │
+├── evals/reports/
 ├── tests/
 └── package.json
 ```
 
+Notes on shape (vs the original sketch):
+
+- **No `core/ingress.ts`.** v1.x ships as a library + CLI/TUI, not an HTTP service. The "Ingress" runtime layer in §3 is reserved for when a hosted-service deployment lands; for now the CLI in `src/cli/` is the entry surface. Auth resolution (API key / Claude subscription) happens at the CLI/setup-wizard layer.
+- **`observability/`** files are `log.ts`, `metrics.ts`, `trace.ts`. There is no separate `cost.ts` — cost is a field on the `TurnRecord` produced by `trace.ts` and surfaced through the `onTurnComplete` callback.
+- **No bundled tracer.** OpenTelemetry / Datadog wiring is per-deployment; `docs/otel-adapter.{ts,md}` is the copy-paste recipe.
+- **Pack hooks** are a directory (`hooks/`) of one-file-per-hook, not a single `hooks.ts`. Same for `agents/`.
+- **`memory/skills-loader.ts`** isn't shipped; skills are listed per-pack and loaded by the SDK from the paths in the pack definition.
+- **In-process MCP servers** live inside each pack's `tools/` directory rather than a central `src/tools/mcp/`.
+
 Conventions:
 
-- Entry-point factory is `createNiato(...)`. The package is published as `niato`.
+- Entry-point factory is `createNiato(...)`. The package is published as `niato` (npm scope: `@aman_asmuei/niato`).
 - One file per `AgentDefinition`. Prompts live in adjacent `.md` files when over ~30 lines.
 - All prompts versioned in git. Never load from a database at runtime.
 - All MCP URLs and credentials referenced via env vars or vault paths. No literals in code.
@@ -556,7 +578,7 @@ This is the rollout I'd recommend when you decide to start coding. Each phase en
 
 **Phase 1 — Skeleton.** Core engine + Generic pack only. The classifier returns a hardcoded intent. The orchestrator dispatches to the Generic retrieval agent. End-to-end loop works.
 
-**Phase 2 — Real classifier.** Replace the stub with the real Haiku classifier. Add 20 golden test cases for the Generic pack. Add basic tracing.
+**Phase 2 — Real classifier.** Replace the stub with the real classifier (Sonnet 4.6 in v1.x via Agent SDK `query()`; Haiku is the architectural target for a future revision). Add 20 golden test cases for the Generic pack. Add basic tracing.
 
 **Phase 3 — Hooks and guardrails.** Wire up the global hook framework. Add input validators. Add cost-limit hook.
 
@@ -598,4 +620,4 @@ These are decisions that should be made before scaffolding, not during:
 3. **MCP server hosting.** Anthropic-hosted partner MCPs where available, vs running our own?
 4. **Pack ownership model.** One team owns all packs vs distributed ownership? Affects CI/release pipeline design.
 5. **Eval cadence.** On every commit, on PR merge, nightly? Affects compute budget for evals.
-6. **Failure mode for the classifier.** If Haiku is down, fall back to a regex classifier, fall back to "always ask for clarification", or fail closed?
+6. **Failure mode for the classifier.** If the classifier model is down, fall back to a regex classifier, fall back to "always ask for clarification", or fail closed?
