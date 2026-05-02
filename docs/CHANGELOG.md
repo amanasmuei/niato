@@ -2,6 +2,32 @@
 
 All notable changes to Niato, since v0.2.0 (the first publishable release).
 
+## v1.3.0 — 2026-05-02
+
+Phase 4.5: live introspection. The TUI now streams what the orchestrator
+is doing as it happens — specialist dispatches, tool calls and their
+results, and inline approval prompts when a hook requests one. Pairs
+with a defensive safety hardening so the deny-on-ask posture is
+explicit, not inferred from undocumented SDK fallback behavior.
+
+### Added
+- **`Niato.runStream(input, sessionId, onEvent)`** — streaming variant of `run()`. Emits a typed `NiatoEvent` per lifecycle moment (`turn_start`, `classified`, `specialist_dispatched`, `tool_call`, `tool_result`, `approval_requested`, `approval_resolved`, `turn_failed`, `turn_complete`). Existing `run()` is unchanged — internally it's `runStream` with a no-op event callback.
+- **`NiatoOptions.approval?: ApprovalChannel`** — wires inline approval prompts. When set, hooks returning `permissionDecision: "ask"` route through the SDK's `Options.canUseTool` to the channel; the TUI consumes them via `useLiveEvents` + `LivePanel` and resolves on `[a]`/`[d]` keypress. Channel API: `src/guardrails/approval-channel.ts` (abort-safe, dup-id-throwing, listener-exception-isolated, late-subscriber-replaying).
+- **`LivePanel` Ink component** — renders the live specialist→tool tree with status ticks (✓ ok, ✗ error, ⊘ blocked, animated `<Spinner type="dots"/>` for in-flight) and the inline approval prompt. Approval-pending tools get a `← awaiting approval` inline marker on the matching row so the prompt isn't visually disconnected. Mounted in the session screen between scrollback and the input row.
+- **`headlessDenyCanUseTool`** — defensive built-in `canUseTool` wired in `compose.ts` whenever `NiatoOptions.approval` is undefined. Auto-denies any `permissionDecision: "ask"` hook decision, so the safety property is explicit and SDK-version-independent (no longer relies on undocumented SDK fallback for missing `canUseTool`).
+- **`dollar_limit` hook migrated to `permissionDecision: "ask"`** — over-threshold refunds (Support pack) now pause for human approval in the TUI instead of always denying. Headless deployments still deny by default via the new built-in. Validates the substrate end-to-end with a real pack hook.
+- **`turn_failed` event** — emitted when classifier or orchestrator throws after `turn_start`. LivePanel consumers can correlate failures by `turnId` instead of needing per-consumer try/catch around `runStream`.
+- **Phase 4.5 docs** — `ARCHITECTURE.md` §10 has a new "Inline approval via canUseTool" paragraph describing the routing + the `permissionMode: "default"` + `canUseTool` always-wired contract; §15 has a new Phase 4.5 entry. CLAUDE.md / AGENTS.md invariant #5 updated to use the SDK's actual hook shape (`permissionDecision: "deny"` instead of the stale `{ action: "block" }`).
+
+### Fixed
+- **`extractGuardrailsTriggered` covers all SDK result subtypes that carry `permission_denials`.** Previously narrowed only on `success` + `error_during_execution`; turns ending via `error_max_turns`, `error_max_budget_usd`, or `error_max_structured_output_retries` silently dropped denied tool calls from the audit trail. Same gap fixed in `event-stream.ts`. Drops the subtype filter entirely now that the SDK union has been verified — every result subtype carries the field, and TS will catch any future subtype that doesn't.
+- **`useInput` sibling capture** in the session screen no longer contaminates the user's draft buffer during approval prompts. `TextInput` gained an `isActive?: boolean` prop; the screen passes `isActive={live.pendingApproval === undefined}` so `[a]`/`[d]` keystrokes resolve the prompt cleanly without leaking into the next prompt.
+- **Mount flicker** between submit and the first `turn_start` event closed by including `"classifying"` in the LivePanel mount condition.
+
+### Changed
+- **`OrchestratorInput` gains optional `onEvent`, `canUseTool`, `logger`, `queryImpl`** (the last is a test-only DI seam). All optional and additive — existing callers continue to work unchanged. The new `logger` field lets the orchestrator log onEvent callback errors at warn (matches `compose.ts`'s `onTurnComplete` callback handling).
+- **`Niato` interface gains `runStream`** alongside the unchanged `run`, `metrics`, `remember` methods.
+
 ## v1.2.1 — 2026-05-02
 
 Patch release — closes the api-key bridge gap left as a TODO in v1.2.0,
