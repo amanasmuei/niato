@@ -2,6 +2,35 @@
 
 All notable changes to Niato, since v0.2.0 (the first publishable release).
 
+## v1.2.1 — 2026-05-02
+
+Patch release — closes the api-key bridge gap left as a TODO in v1.2.0,
+and quiets the GitHub Actions Node.js 20 deprecation warning.
+
+### Fixed
+- **In-app api-key entry now reaches `resolveAuthMode` end-to-end.** The
+  v1.2.0 release shipped with a known TODO: `onApiKeySubmit` saved the
+  key to `~/.niato/auth.json` but never bridged it into `process.env`,
+  so users who picked the API-key path through the TUI still hit "no
+  auth configured" on next launch. Two fixes:
+  - `applyPersistedAuthEnv` (TUI startup, runs before niatoFactory)
+    now bridges api-key files → `ANTHROPIC_API_KEY`. Symmetric with
+    the existing subscription bridge.
+  - `onApiKeySubmit` (TUI flow, same launch) sets the env var
+    immediately. Otherwise a user who entered a key and then picked
+    "New session" without restarting niato would still throw, because
+    the file → env bridge only runs at startup.
+- Pre-existing shell `ANTHROPIC_API_KEY` always wins over the persisted
+  file value — explicit shell config beats TUI choice, mirroring the
+  subscription bridge's precedence.
+
+### Changed
+- `.github/workflows/{ci,release}.yml`: opt into Node.js 24 runtime for
+  bundled JS actions via `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`.
+  Removes the deprecation warning that GitHub flips on every run; safe
+  to drop once `actions/checkout@v5` etc. ship Node-24 native builds
+  and we update the pins.
+
 ## v1.2.0 — 2026-05-02
 
 Auth UX hardening + a third auth path. All additive — no breaking changes.

@@ -194,12 +194,12 @@ export function App({
   };
 
   const onApiKeySubmit = (apiKey: string): void => {
-    // TODO(follow-up): persisting the api-key state file is necessary but
-    // not sufficient. resolveAuthMode reads ANTHROPIC_API_KEY from process.env;
-    // applyPersistedAuthEnv only bridges subscription mode (api-key was meant
-    // to "carry that path on its own" via the shell env, but in-app entry
-    // bypasses the shell). Likely fix: bridge api-key → process.env here, or
-    // extend applyPersistedAuthEnv to set ANTHROPIC_API_KEY for api-key files.
+    // Same-process bridge: the user just typed a key into the TUI; if they
+    // then pick "New session" without restarting niato, the factory will
+    // call resolveAuthMode → reads process.env.ANTHROPIC_API_KEY → must
+    // already be set. applyPersistedAuthEnv handles the *next-launch* case
+    // (file → env at startup); this handles the *current-launch* case.
+    process.env["ANTHROPIC_API_KEY"] = apiKey;
     const next: AuthState = { mode: "api-key", apiKey };
     saveAuth(next, authPath);
     setAuth(next);

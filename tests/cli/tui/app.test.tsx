@@ -160,6 +160,12 @@ describe("App shell", () => {
     stdin.write(ENTER);
     await flush();
 
+    // Same-process bridge (v1.2.1): the in-app submission must also set
+    // process.env.ANTHROPIC_API_KEY so the niatoFactory invocation later
+    // in this same launch sees auth — file persistence alone is read by
+    // applyPersistedAuthEnv on the *next* launch, not this one.
+    expect(process.env["ANTHROPIC_API_KEY"]).toBe("sk-ant-test123");
+
     // companion wizard step 1 — name
     expect(lastFrame() ?? "").toMatch(/companion name|step 1/i);
     stdin.write("Layla");
