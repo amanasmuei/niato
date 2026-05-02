@@ -4,7 +4,9 @@
 
 **An intent-routing agent built on the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview).**
 
-[![npm version](https://img.shields.io/npm/v/niato.svg?color=blue)](https://www.npmjs.com/package/niato)
+[![npm version](https://img.shields.io/npm/v/@aman_asmuei/niato.svg?color=blue)](https://www.npmjs.com/package/@aman_asmuei/niato)
+[![CI](https://github.com/amanasmuei/niato/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/amanasmuei/niato/actions/workflows/ci.yml)
+[![Release](https://github.com/amanasmuei/niato/actions/workflows/release.yml/badge.svg)](https://github.com/amanasmuei/niato/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript)](./tsconfig.json)
 [![Node 20+](https://img.shields.io/badge/Node-20.6%2B-brightgreen)](#)
@@ -12,6 +14,10 @@
 > *Niato* — derived from *niat* (Malay/Indonesian for *"intention"*, from the Arabic root نِيَّة). The formal declaration of intent before an act.
 
 </div>
+
+---
+
+> **What's new in v1.3.0 — live introspection.** The TUI now streams what the orchestrator is doing as it happens: specialist dispatches, every tool call and result, and **inline approval prompts** when a hook requests one (`[a]` allow / `[d]` deny). Backed by `Niato.runStream()` for programmatic consumers and an explicit `headlessDenyCanUseTool` so the deny-on-ask safety posture is SDK-version-independent. See [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) for the full list.
 
 ---
 
@@ -86,6 +92,7 @@ After install, `niato` (or `niato tui`) launches a polished Ink terminal app:
 - **Launcher** — New session · Resume last · Settings · About
 - **Mode pick** — *Casual* (warm, minimal observability) · *Dev* (full per-turn trace)
 - **Always-visible footer** — classify/dispatch ticks, latency, cost
+- **Live introspection panel** *(v1.3.0)* — streams specialist dispatches and every tool call as they happen, with status ticks (✓ ok · ✗ error · ⊘ blocked · animated spinner for in-flight). When a hook returns `permissionDecision: "ask"`, the panel pauses with an inline `[a] allow / [d] deny` prompt — text input is modally suspended so your keystrokes resolve the prompt cleanly without leaking into the next message.
 - **Sessions persisted** as JSONL at `~/.niato/sessions/{id}.jsonl` (last 50 retained)
 
 ```
@@ -276,7 +283,7 @@ await niato.remember(["Prefers concise answers.", "Lives in Kuala Lumpur."]);
 await niato.run("Where can I buy good kopi?"); // sees the remembered facts
 ```
 
-`userId` resolves from `NiatoOptions.memory.userId` → `Config.NIATO_USER_ID` → `"default"`. One Niato instance is one user — `userId` is *not* accepted per-turn on `niato.run()`. Auto-extraction of facts from conversation lands in v1.1; for now `remember()` is the only writer.
+`userId` resolves from `NiatoOptions.memory.userId` → `Config.NIATO_USER_ID` → `"default"`. One Niato instance is one user — `userId` is *not* accepted per-turn on `niato.run()`. Auto-extraction of facts from conversation is on the post-1.0 backlog; for now `remember()` is the only writer.
 
 </details>
 
@@ -483,7 +490,7 @@ Full setup + per-release flow in [`docs/RELEASING.md`](./docs/RELEASING.md). TL;
 ```bash
 # Bump version in package.json + CHANGELOG.md, commit, then:
 git tag -a vX.Y.Z -m "vX.Y.Z"
-git push origin master vX.Y.Z
+git push origin main vX.Y.Z
 # CI takes over: builds, validates, publishes to npm.
 ```
 
@@ -505,6 +512,8 @@ git push origin master vX.Y.Z
 
 **Shipped (post-1.0):**
 
+- **Phase 4.5 — live introspection panel (v1.3.0)** — TUI streams `NiatoEvent`s during a turn; inline approval prompts for `permissionDecision: "ask"` hooks (`[a]` / `[d]` keypress); `Niato.runStream(input, sessionId, onEvent)` for programmatic consumers; defensive `headlessDenyCanUseTool` makes the deny-on-ask posture explicit (no longer relies on undocumented SDK fallback). `dollar_limit` migrated from `deny` → `ask` as the canonical example.
+- Api-key bridge fix (v1.2.1) — in-app key entry now reaches `resolveAuthMode` end-to-end; pre-existing shell `ANTHROPIC_API_KEY` always wins over persisted file value.
 - Auth UX hardening (v1.2.0) — `niato login` now persists the choice (no more "logged in but logged out"), `niato setup-token` for CI / headless via `CLAUDE_CODE_OAUTH_TOKEN`, three auth paths documented in priority order.
 - Eval baselines committed for all three packs (`generic` 20/20, `support` 23/25, `dev_tools` 25/25). CI gate active via `pnpm eval <pack> --baseline`.
 - Long-term cross-session memory — file-based default at `~/.niato/memory/<userId>.json` with a thin `MemoryStore` interface for plugging in Redis/Postgres later.
