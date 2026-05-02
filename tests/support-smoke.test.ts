@@ -10,10 +10,13 @@ import {
 //   2. refund under $20 → refund_processor dispatches and the dollar-limit
 //      hook does NOT block it.
 //   3. refund at/above $20 → dollar-limit hook returns permissionDecision:
-//      'ask'. The headless createNiato() entry point in this test does NOT
-//      wire Options.canUseTool, so the SDK's default-deny on 'ask' kicks
-//      in and the tool call is blocked. The orchestrator's final response
-//      should NOT contain a refund ID.
+//      'ask'. Headless createNiato({...}) without `approval: channel`
+//      wired receives Niato's built-in headlessDenyCanUseTool
+//      (compose.ts), which auto-denies any 'ask' decision. The
+//      resulting flow is: hook returns ask → SDK calls canUseTool →
+//      built-in returns deny → tool is denied → orchestrator sees the
+//      denial and adapts its plan. The visible outcome (no RF- ID
+//      emitted) is identical to the prior explicit-deny posture.
 //
 // Each turn costs ~$0.05; total ~$0.15. Skipped without ANTHROPIC_API_KEY.
 const hasKey = Boolean(process.env["ANTHROPIC_API_KEY"]);
@@ -57,12 +60,12 @@ describe.skipIf(!hasKey)("smoke: Support pack end-to-end", () => {
     expect(turn.classification.intent).toBe("refund_request");
     expect(turn.trace.outcome).toBe("success");
     // The hook now returns permissionDecision: 'ask' for amounts at/above
-    // the threshold. Headless createNiato() above does not wire
-    // Options.canUseTool, so the SDK default-denies the 'ask' decision and
-    // the orchestrator sees the tool call rejected. We don't strictly
-    // require the orchestrator to re-dispatch to escalate (behavior depends
-    // on the model's read of the denial); we DO require that no refund ID
-    // was issued.
+    // the threshold. Headless createNiato() above does not wire an
+    // ApprovalChannel, so Niato's built-in headlessDenyCanUseTool
+    // (compose.ts) auto-denies and the orchestrator sees the tool call
+    // rejected. We don't strictly require the orchestrator to re-dispatch
+    // to escalate (behavior depends on the model's read of the denial);
+    // we DO require that no refund ID was issued.
     expect(turn.result).not.toMatch(/RF-[A-Z0-9]{8}/);
   }, 180_000);
 });

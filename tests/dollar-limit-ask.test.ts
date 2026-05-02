@@ -1,6 +1,27 @@
 import { describe, it, expect } from "vitest";
 import { dollarLimit } from "../src/packs/support/hooks/dollar_limit.js";
 
+// Wraps the hook call so the three required test casts (input/ctx/signal)
+// live in one place with one explanation.
+async function invokeDollarLimit(
+  callback: NonNullable<ReturnType<typeof dollarLimit>["hooks"][number]>,
+  toolInput: Record<string, unknown>,
+): ReturnType<typeof callback> {
+  return callback(
+    // Cast: the SDK's PreToolUseHookInput has additional fields not
+    // exercised by this hook; we provide only what dollar_limit reads.
+    {
+      hook_event_name: "PreToolUse",
+      tool_name: "mcp__support__issue_refund",
+      tool_input: toolInput,
+    } as unknown as Parameters<typeof callback>[0],
+    // Cast: tool runtime context not exercised by this hook.
+    {} as unknown as Parameters<typeof callback>[1],
+    // Cast: signal context not exercised either.
+    {} as unknown as Parameters<typeof callback>[2],
+  );
+}
+
 describe("dollarLimit (ask mode)", () => {
   it("returns permissionDecision: 'ask' for amounts at or above threshold", async () => {
     const matcher = dollarLimit({
@@ -11,19 +32,7 @@ describe("dollarLimit (ask mode)", () => {
     if (callback === undefined) {
       throw new Error("dollarLimit returned a matcher with no hooks");
     }
-    const result = await callback(
-      // Cast: the SDK's PreToolUseHookInput has additional fields not
-      // exercised by this hook; we provide only what dollar_limit reads.
-      {
-        hook_event_name: "PreToolUse",
-        tool_name: "mcp__support__issue_refund",
-        tool_input: { amount_usd: 600 },
-      } as unknown as Parameters<typeof callback>[0],
-      // Cast: tool runtime context not exercised by this hook.
-      {} as unknown as Parameters<typeof callback>[1],
-      // Cast: signal context not exercised either.
-      {} as unknown as Parameters<typeof callback>[2],
-    );
+    const result = await invokeDollarLimit(callback, { amount_usd: 600 });
     // Cast: hookSpecificOutput is a discriminated union; PreToolUse branch
     // is the only one this hook returns.
     const out = (result as {
@@ -47,15 +56,7 @@ describe("dollarLimit (ask mode)", () => {
     if (callback === undefined) {
       throw new Error("dollarLimit returned a matcher with no hooks");
     }
-    const result = await callback(
-      {
-        hook_event_name: "PreToolUse",
-        tool_name: "mcp__support__issue_refund",
-        tool_input: { amount_usd: 100 },
-      } as unknown as Parameters<typeof callback>[0],
-      {} as unknown as Parameters<typeof callback>[1],
-      {} as unknown as Parameters<typeof callback>[2],
-    );
+    const result = await invokeDollarLimit(callback, { amount_usd: 100 });
     expect(result).toEqual({ continue: true });
   });
 });

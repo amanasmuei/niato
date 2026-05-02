@@ -7,9 +7,11 @@ import {
 // `autoApproveBelow` return permissionDecision: 'ask', which the SDK
 // routes to Options.canUseTool — typically a TUI ApprovalChannel for
 // inline approval (see src/guardrails/approval-channel.ts and the
-// LivePanel keypress flow). Headless deployments without canUseTool
-// wired will see the SDK default-deny 'ask' decisions, preserving the
-// prior safety posture exactly.
+// LivePanel keypress flow). Headless deployments fall back to Niato's
+// built-in headlessDenyCanUseTool (see src/core/compose.ts), which
+// auto-denies any 'ask' decision. The deny posture is therefore
+// explicit and SDK-version-independent, not inferred from SDK fallback
+// behavior — preserves the prior safety stance exactly.
 
 export interface DollarLimitOptions {
   tool: string;
@@ -49,7 +51,7 @@ export function dollarLimit(
         hookSpecificOutput: {
           hookEventName: "PreToolUse",
           permissionDecision: "ask",
-          permissionDecisionReason: `Refund of $${amount.toFixed(2)} exceeds auto-approve threshold of $${options.autoApproveBelow.toFixed(2)} — confirm to proceed.`,
+          permissionDecisionReason: `Refund of $${amount.toFixed(2)} exceeds auto-approve threshold of $${options.autoApproveBelow.toFixed(2)}. Approve or deny to continue.`,
         },
       });
     }

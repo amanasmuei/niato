@@ -79,7 +79,7 @@ const searchKbTool = tool(
 
 const issueRefundTool = tool(
   "issue_refund",
-  "Issue a refund against an order. The dollar-limit hook gates this: refunds at or above the auto-approve threshold are denied with a reason that surfaces back to the orchestrator.",
+  "Issue a refund against an order. The dollar-limit hook gates this: refunds at or above the auto-approve threshold pause for human approval; the request surfaces to the user via the TUI approval channel, or is auto-denied in headless deployments without an approval channel wired.",
   {
     order_id: z.string().describe("Order ID, e.g. ORD-12345"),
     amount_usd: z.number().positive().describe("Refund amount in USD"),

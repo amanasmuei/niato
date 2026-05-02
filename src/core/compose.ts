@@ -97,8 +97,10 @@ export interface NiatoOptions {
   // ApprovalChannel wired into the SDK's canUseTool. When set, hooks
   // returning permissionDecision: 'ask' surface as ApprovalRequests on
   // this channel; UI consumers (TUI LivePanel) resolve them via keypress.
-  // Omit for headless deployments — the SDK then denies 'ask' decisions
-  // by default, preserving the prior safety posture.
+  // Omit for headless deployments — Niato then installs its built-in
+  // headlessDenyCanUseTool which auto-denies any 'ask' decision,
+  // making the deny-on-ask safety posture explicit and SDK-version-
+  // independent rather than inferred from SDK fallback behavior.
   approval?: ApprovalChannel | undefined;
 }
 
@@ -156,6 +158,20 @@ export interface Niato {
 // The `turnId` is used as a fallback approvalId namespace if the SDK's
 // per-tool toolUseID is missing — that should never happen in practice
 // but defends against future SDK contract drift.
+// Defensive default canUseTool used when no ApprovalChannel is wired.
+// Hooks returning permissionDecision: 'ask' would otherwise depend on
+// undocumented SDK fallback behavior; this makes the deny-on-ask
+// posture explicit. Surfaces the hook's decisionReason back to the
+// orchestrator so it can replan.
+const headlessDenyCanUseTool: CanUseTool = (toolName, _input, ctx) =>
+  Promise.resolve({
+    behavior: "deny",
+    message:
+      ctx.decisionReason !== undefined
+        ? `${toolName}: ${ctx.decisionReason} (no approval channel wired; denied by default)`
+        : `${toolName}: denied by default (no approval channel wired)`,
+  });
+
 function buildCanUseTool(
   channel: ApprovalChannel,
   turnId: string,
@@ -329,10 +345,16 @@ export function createNiato(options: NiatoOptions): Niato {
         ? { resume: session.id }
         : { sessionId: session.id };
 
-      const canUseTool: CanUseTool | undefined =
+      // Always wire a canUseTool. When `options.approval` is configured,
+      // route to the TUI ApprovalChannel; otherwise use a defensive
+      // built-in that auto-denies. This makes the safety property
+      // explicit (CLAUDE.md §5: hooks are enforcement, not logging)
+      // rather than inferring it from undocumented SDK behavior on
+      // permissionDecision: 'ask' without a canUseTool callback.
+      const canUseTool: CanUseTool =
         options.approval !== undefined
           ? buildCanUseTool(options.approval, turnId)
-          : undefined;
+          : headlessDenyCanUseTool;
 
       const orchestratorResult = await orchestratorRun({
         userInput,
@@ -342,7 +364,7 @@ export function createNiato(options: NiatoOptions): Niato {
         cwd: NIATO_SDK_SESSIONS_DIR,
         onEvent,
         logger,
-        ...(canUseTool !== undefined ? { canUseTool } : {}),
+        canUseTool,
         ...sessionArg,
         ...(options.persona !== undefined ? { persona: options.persona } : {}),
         ...(memoryPreamble !== undefined && memoryPreamble.length > 0
