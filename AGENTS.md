@@ -42,7 +42,7 @@ The package is published as `niato`. The entry-point factory is `createNiato(...
 2. **The classifier is out-of-band.** It is not a tool the orchestrator calls. It runs before the orchestrator and its result is passed in via the first user message or system prompt.
 3. **Confidence policy.** `>= 0.85` dispatch directly. `0.6–0.85` dispatch with verification or one clarifier. `< 0.6` ask the user, do not dispatch.
 4. **Subagents do not inherit parent context.** Anything a specialist needs (file paths, entities, prior decisions) must be in the prompt string passed to the `Agent` tool.
-5. **Hooks are enforcement, not logging.** A `preToolUse` hook returning `{ action: "block" }` actually blocks. Logging hooks should sit alongside, not replace, enforcement.
+5. **Hooks are enforcement, not logging.** A `preToolUse` hook returning `permissionDecision: "deny"` actually blocks; one returning `permissionDecision: "ask"` routes to `Options.canUseTool` (Phase 4.5 — see `ARCHITECTURE.md` §10). Logging hooks should sit alongside, not replace, enforcement.
 6. **Specialists in a pack have minimum-viable tool allowlists.** If a specialist doesn't need `Bash`, it doesn't get `Bash`.
 7. **Declare before act.** Niato's core philosophy: classifier states intent, orchestrator states plan, guardrails state what's about to happen — then the system acts. Do not introduce code paths that act without declaring.
 
@@ -64,7 +64,7 @@ The package is published as `niato`. The entry-point factory is `createNiato(...
 ## What to NOT do
 
 - Don't add a fourth domain pack until the first three are stable.
-- Don't add observability tooling beyond console logs in Phase 1–2. Real tracing comes in Phase 7.
+- Don't add observability tooling beyond console logs and the Phase 4.5 LivePanel surface in Phase 1–2. Real *export* tracing (OTel, dashboards, alerts) comes in Phase 7. The LivePanel is in-process introspection only — no exporter, no telemetry sink.
 - Don't load real credentials or MCP servers in tests. Use stub adapters.
 - Don't create new top-level directories without discussion.
 - Don't change the architectural invariants in this file or in `ARCHITECTURE.md` without flagging the change explicitly.
