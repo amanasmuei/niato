@@ -126,6 +126,21 @@ describe("LivePanel", () => {
     expect(lastFrame()).toBeDefined();
   });
 
+  it("shows '← awaiting approval' inline on the tool row whose toolUseId matches pendingApproval", () => {
+    const { lastFrame } = render(
+      <LivePanel
+        events={[dispatched, toolCall]}
+        pendingApproval={{
+          approvalId: "tu_2",
+          toolName: "Read",
+          toolInput: { file_path: "/tmp/x" },
+          reason: "test",
+        }}
+      />,
+    );
+    expect(lastFrame() ?? "").toMatch(/awaiting approval/i);
+  });
+
   it("drops a tool_call whose parentToolUseId has no matching specialist", () => {
     const orphanToolCall: NiatoEvent = {
       type: "tool_call",

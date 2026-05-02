@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text, useInput } from "ink";
+import Spinner from "ink-spinner";
 import { type NiatoEvent } from "../../../observability/events.js";
 import { type ApprovalRequest } from "../../../guardrails/approval-channel.js";
 
@@ -101,7 +102,11 @@ function tickFor(
   if (outcome === "ok") return <Text color="green">✓</Text>;
   if (outcome === "error") return <Text color="red">✗</Text>;
   if (outcome === "blocked") return <Text color="yellow">⊘</Text>;
-  return <Text color="gray">◓</Text>;
+  return (
+    <Text color="gray">
+      <Spinner type="dots" />
+    </Text>
+  );
 }
 
 export function LivePanel({
@@ -143,6 +148,8 @@ export function LivePanel({
           {row.tools.map((tool, idx) => {
             const isLast = idx === row.tools.length - 1;
             const branch = isLast ? "└─" : "├─";
+            const isPendingApproval =
+              pendingApproval?.approvalId === tool.toolUseId;
             return (
               <Box key={tool.toolUseId} flexDirection="column">
                 <Box>
@@ -150,6 +157,9 @@ export function LivePanel({
                   {tickFor(tool.result?.outcome)}
                   <Text>{` ${tool.name}`}</Text>
                   <Text color="gray">{` ${tool.inputPreview}`}</Text>
+                  {isPendingApproval && (
+                    <Text color="yellow">{`  ← awaiting approval`}</Text>
+                  )}
                 </Box>
                 {tool.result?.outcome === "blocked" &&
                   tool.result.reason !== undefined && (
