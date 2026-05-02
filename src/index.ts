@@ -48,6 +48,21 @@ export {
 export type { SessionMetrics } from "./observability/metrics.js";
 export { emptySessionMetrics } from "./observability/metrics.js";
 export type { SessionContext } from "./memory/session.js";
+export type {
+  MemoryStore,
+  LongTermMemoryRecord,
+  FileMemoryStoreOptions,
+} from "./memory/long-term.js";
+export {
+  FileMemoryStore,
+  buildMemoryPreamble,
+  loadOrInitMemory,
+  applyFactCap,
+  emptyMemoryRecord,
+  LongTermMemoryRecordSchema,
+  MAX_FACTS,
+  MAX_FACTS_TEXT_BYTES,
+} from "./memory/long-term.js";
 
 export { stubClassifier } from "./core/classifier/stub.js";
 export { mergePackAgents } from "./core/orchestrator/orchestrator.js";

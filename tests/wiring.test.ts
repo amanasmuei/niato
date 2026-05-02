@@ -42,6 +42,7 @@ function fakeSession(cumulativeCostUsd: number): SessionContext {
 const fakeConfig: Config = {
   ANTHROPIC_API_KEY: "test-key-not-real",
   NIATO_LOG_LEVEL: "error",
+  NIATO_USER_ID: "default",
 };
 
 describe("createNiato", () => {
@@ -467,7 +468,11 @@ describe("niato.run session threading (v0.4)", () => {
           }),
       },
       orchestratorRunner: stubOrchestratorRun,
-      config: { ANTHROPIC_API_KEY: "sk-test", NIATO_LOG_LEVEL: "error" },
+      config: {
+        ANTHROPIC_API_KEY: "sk-test",
+        NIATO_LOG_LEVEL: "error",
+        NIATO_USER_ID: "default",
+      },
     });
 
     const turn1 = await niato.run("hi");

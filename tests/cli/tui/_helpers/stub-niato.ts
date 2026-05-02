@@ -76,5 +76,11 @@ export function makeStubNiato(responses: StubResponse[]): Niato {
     metrics(_sessionId): SessionMetrics | undefined {
       return undefined;
     },
+    remember(_facts: string[]): Promise<void> {
+      // Stub: long-term memory is not exercised by TUI tests today. Real
+      // wiring lives in tests/long-term-memory.test.ts and
+      // tests/file-memory-store.test.ts.
+      return Promise.resolve();
+    },
   };
 }

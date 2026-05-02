@@ -254,6 +254,27 @@ What Level 1 covers: a consistent voice across every turn. What it doesn't: pers
 
 </details>
 
+<details>
+<summary><strong>Long-term memory (Tier 2)</strong> — durable per-user facts the orchestrator remembers</summary>
+
+`memory?: { store?, userId? }` on `NiatoOptions` opts a Niato instance into cross-session memory. Facts are loaded once at `createNiato()` startup, formatted into a preamble between the persona and the operational prompt, and persisted to the configured `MemoryStore`. The default `FileMemoryStore` writes JSON to `~/.niato/memory/<userId>.json`; swap in Redis / Postgres / etc. by implementing the two-method interface. Append facts with `await niato.remember([...])` — the next turn sees them. Soft-capped at 100 facts / ~4 KB; older facts are dropped with a `warn` log on overflow. Memory injects into the orchestrator's system prompt only; specialists never see it (architectural invariant #4).
+
+```ts
+const niato = createNiato({
+  packs: [genericPack],
+  memory: { userId: "alice" },             // FileMemoryStore by default
+  persona: { name: "Layla", description: "Warm, faith-aware companion." },
+});
+
+await niato.run("Hi, I'm new here.");
+await niato.remember(["Prefers concise answers.", "Lives in Kuala Lumpur."]);
+await niato.run("Where can I buy good kopi?"); // sees the remembered facts
+```
+
+`userId` resolves from `NiatoOptions.memory.userId` → `Config.NIATO_USER_ID` → `"default"`. One Niato instance is one user — `userId` is *not* accepted per-turn on `niato.run()`. Auto-extraction of facts from conversation lands in v1.1; for now `remember()` is the only writer.
+
+</details>
+
 ---
 
 ## Reference

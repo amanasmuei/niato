@@ -26,6 +26,12 @@ export interface OrchestratorInput {
   // Optional Level 1 persona. Prepended to the orchestrator's system
   // prompt as the user-facing identity layer. See src/core/persona.ts.
   persona?: Persona;
+  // Optional Tier 2 long-term memory preamble. Composed between the
+  // persona block and the operational orchestrator prompt. Built once
+  // by compose.ts at startup (and on every remember()), passed in here
+  // so the orchestrator stays unaware of the storage backend. See
+  // src/memory/long-term.ts.
+  memoryPreamble?: string;
   // Mutually exclusive: sessionId starts a new SDK session with the given
   // UUID; resume loads a prior session's transcript. Pass exactly one
   // (or neither for legacy single-shot behavior).
@@ -158,14 +164,23 @@ const builtInHooks: Hooks = {
   PreToolUse: [{ hooks: [agentOnlyOrchestratorHook] }],
 };
 
-// Composes the orchestrator's full system prompt from the optional persona
-// preamble (Level 1 user-facing identity) and the existing operational
-// dispatch instructions. Exposed as a named helper so the persona wiring
-// is verifiable without mocking the Agent SDK's query().
+// Composes the orchestrator's full system prompt:
+//   persona preamble  (Level 1 — who you are)
+//   ---
+//   memory preamble   (Tier 2 — what you know about this user)
+//   ---
+//   ORCHESTRATOR_PROMPT (operational instructions)
+//
+// Both preambles are opt-in by presence and end in their own `---`
+// separator (see buildPersonaPreamble / buildMemoryPreamble), so this
+// function is just string concatenation — no extra glue. Exposed as a
+// named helper so the wiring is verifiable without mocking the SDK's
+// query().
 export function buildOrchestratorSystemPrompt(
   persona: Persona | undefined,
+  memoryPreamble?: string,
 ): string {
-  return `${buildPersonaPreamble(persona)}${ORCHESTRATOR_PROMPT}`;
+  return `${buildPersonaPreamble(persona)}${memoryPreamble ?? ""}${ORCHESTRATOR_PROMPT}`;
 }
 
 export function buildOrchestratorOptions(input: OrchestratorInput): Options {
@@ -175,7 +190,10 @@ export function buildOrchestratorOptions(input: OrchestratorInput): Options {
     );
   }
   const mcpServers = mergePackMcpServers(input.packs);
-  const systemPrompt = buildOrchestratorSystemPrompt(input.persona);
+  const systemPrompt = buildOrchestratorSystemPrompt(
+    input.persona,
+    input.memoryPreamble,
+  );
   const options: Options = {
     model: ORCHESTRATOR_MODEL,
     systemPrompt,

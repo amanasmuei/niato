@@ -28,6 +28,14 @@ import {
 } from "../observability/metrics.js";
 import { type Persona } from "./persona.js";
 import { loadConfig, resolveAuthMode, type Config } from "./config.js";
+import {
+  type MemoryStore,
+  FileMemoryStore,
+  applyFactCap,
+  buildMemoryPreamble,
+  loadOrInitMemory,
+  type LongTermMemoryRecord,
+} from "../memory/long-term.js";
 
 // Where the SDK persists conversation transcripts. Setting cwd here
 // (rather than letting the SDK default to process.cwd()) means session
@@ -63,6 +71,16 @@ export interface NiatoOptions {
   // user / multi-tenant persona is Level 2; persistent companion memory
   // is Level 3.
   persona?: Persona;
+  // Tier 2 long-term memory. Opt-in by presence — when omitted, no
+  // preamble is injected and no store is initialized (identical to
+  // how persona is handled). Pluggable via `store`; userId resolution
+  // is `memory.userId` → `Config.NIATO_USER_ID` → `"default"`. One
+  // Niato instance is one user; userId is NOT accepted per-turn on
+  // run(). See src/memory/long-term.ts.
+  memory?: {
+    store?: MemoryStore;
+    userId?: string;
+  };
   config?: Config;
   logger?: Logger;
   // Internal seam: lets tests substitute the orchestrator runner. Production
@@ -95,6 +113,13 @@ export interface Niato {
   // run() has completed for the given session. Returns undefined when the
   // session is unknown (e.g. never created or evicted).
   metrics(sessionId: string): SessionMetrics | undefined;
+  // Append facts to the user's long-term memory. Mutates the in-memory
+  // record, re-serializes the cached preamble (so the next turn sees the
+  // new facts without busting the prompt cache for unrelated turns), and
+  // persists to the configured MemoryStore. No-ops when `memory` was not
+  // configured at createNiato(). Soft-capped at MAX_FACTS / ~4KB; on
+  // overflow the oldest facts are dropped with a `warn` log.
+  remember(facts: string[]): Promise<void>;
 }
 
 export function createNiato(options: NiatoOptions): Niato {
@@ -130,6 +155,52 @@ export function createNiato(options: NiatoOptions): Niato {
   );
   const validators = options.inputValidators ?? [maxLengthValidator(32_000)];
 
+  // Tier 2 long-term memory wiring. Opt-in by presence: when
+  // `options.memory` is undefined, no store is initialized, no preamble
+  // is built, and `remember()` is a no-op. The factory closure caches
+  // both the live record and its serialized preamble — the latter so
+  // every turn passes an identical string into the orchestrator's
+  // system prompt and the SDK's prompt cache stays warm. Re-reading
+  // the file each turn would bust the cache.
+  //
+  // The MemoryStore interface is async, so the factory kicks off the
+  // initial load and stores the Promise. run() awaits it once (the
+  // promise resolves long before the SDK query returns; subsequent
+  // turns await an already-settled promise = ~0ms). remember() chains
+  // off the same load promise to avoid racing with a slow first read.
+  let memoryRecord: LongTermMemoryRecord | undefined;
+  let memoryPreamble: string | undefined;
+  let memoryStore: MemoryStore | undefined;
+  let memoryUserId: string | undefined;
+  let memoryReady: Promise<void> = Promise.resolve();
+  if (options.memory !== undefined) {
+    memoryStore = options.memory.store ?? new FileMemoryStore();
+    // Resolution order: memory.userId → Config.NIATO_USER_ID. The latter
+    // already defaults to "default" via the zod schema, so no further
+    // fallback is needed here.
+    memoryUserId = options.memory.userId ?? config.NIATO_USER_ID;
+    const store = memoryStore;
+    const userId = memoryUserId;
+    memoryReady = (async (): Promise<void> => {
+      try {
+        const loaded = await loadOrInitMemory(store, userId);
+        memoryRecord = loaded;
+        memoryPreamble = buildMemoryPreamble(loaded.facts);
+      } catch (err) {
+        // Defensive: a malformed file or permission error must not
+        // crash startup. Log at warn and leave memory unset — the
+        // user gets a working Niato with no remembered facts rather
+        // than no Niato at all.
+        memoryRecord = { version: 1, facts: [], updatedAt: "" };
+        memoryPreamble = "";
+        logger.log("warn", "long-term memory: load failed", {
+          userId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    })();
+  }
+
   return {
     async run(userInput, sessionId) {
       for (const validator of validators) {
@@ -141,6 +212,12 @@ export function createNiato(options: NiatoOptions): Niato {
 
       const session = sessions.getOrCreate(sessionId);
       ensureBudget(session, options.costLimitUsd);
+
+      // Make sure the initial memory load (if memory is configured)
+      // has resolved before we compose the system prompt. The promise
+      // is settled after the first turn, so this is a no-op on every
+      // subsequent run().
+      await memoryReady;
 
       const turnId = randomUUID();
       const startedAt = Date.now();
@@ -168,6 +245,9 @@ export function createNiato(options: NiatoOptions): Niato {
         cwd: NIATO_SDK_SESSIONS_DIR,
         ...sessionArg,
         ...(options.persona !== undefined ? { persona: options.persona } : {}),
+        ...(memoryPreamble !== undefined && memoryPreamble.length > 0
+          ? { memoryPreamble }
+          : {}),
       });
 
       // Flip the started flag AFTER a successful turn so a thrown orchestrator
@@ -217,6 +297,57 @@ export function createNiato(options: NiatoOptions): Niato {
       // "reset" a dashboard view would silently corrupt the session's
       // running state). Telemetry callers do this kind of thing.
       return m === undefined ? undefined : structuredClone(m);
+    },
+    async remember(facts) {
+      // No-op when memory wasn't opted in. Returning silently keeps the
+      // public API ergonomic for callers that conditionally configure
+      // memory (e.g. dev vs prod). Only the opt-in check happens
+      // before the await — checking memoryRecord here would race the
+      // initial load and silently drop facts when remember() is
+      // called before the first run().
+      if (memoryStore === undefined || memoryUserId === undefined) {
+        return;
+      }
+      // Wait for the initial load to settle before mutating — otherwise
+      // a fast remember() right after createNiato() could race the read
+      // and overwrite legitimate facts with an empty record.
+      await memoryReady;
+      const cleaned = facts
+        .map((f) => f.trim())
+        .filter((f) => f.length > 0);
+      if (cleaned.length === 0) return;
+      // After memoryReady has settled both the success and catch
+      // branches have populated memoryRecord — undefined here would be
+      // a programming error, so bail with a warn and a fresh record
+      // rather than swallowing the write silently.
+      if (memoryRecord === undefined) {
+        logger.log("warn", "long-term memory: record missing after load", {
+          userId: memoryUserId,
+        });
+        memoryRecord = { version: 1, facts: [], updatedAt: "" };
+      }
+      const merged = [...memoryRecord.facts, ...cleaned];
+      const { facts: capped, dropped } = applyFactCap(merged);
+      if (dropped > 0) {
+        logger.log("warn", "long-term memory: cap reached, dropped oldest", {
+          userId: memoryUserId,
+          dropped,
+          retained: capped.length,
+        });
+      }
+      const next: LongTermMemoryRecord = {
+        version: 1,
+        facts: capped,
+        updatedAt: new Date().toISOString(),
+      };
+      // Mutate the closure cache BEFORE awaiting the write. This is
+      // safe because we've already awaited memoryReady; further
+      // remember() calls observe the updated state immediately, and
+      // the next run() picks up the new preamble even if the disk
+      // write is still in flight.
+      memoryRecord = next;
+      memoryPreamble = buildMemoryPreamble(capped);
+      await memoryStore.write(memoryUserId, next);
     },
   };
 }

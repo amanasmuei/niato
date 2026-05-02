@@ -12,6 +12,7 @@ import {
 const fakeConfig: Config = {
   ANTHROPIC_API_KEY: "test-key-not-real",
   NIATO_LOG_LEVEL: "error",
+  NIATO_USER_ID: "default",
 };
 
 describe("maxLengthValidator", () => {

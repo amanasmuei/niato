@@ -358,6 +358,10 @@ Three tiers, three lifetimes.
 
 The SDK's `compact` feature auto-summarizes prior messages when the context window approaches limit. Don't reinvent it. Practitioners report best results from rewriting (not appending) a short session summary at end-of-turn — the SDK's compact does this for you.
 
+**v1.x long-term memory implementation note.** v1.x ships the durable tier as a deliberately simpler shape than the table above suggests: a free-form `facts: string[]` written to JSON files at `~/.niato/memory/<userId>.json`, plus a thin two-method `MemoryStore` interface (`read` + `write`). The default `FileMemoryStore` is what `createNiato({ memory: {} })` selects out of the box. Pluggable adapters remain the future shape — Redis / DynamoDB / Postgres backends drop in by implementing the same interface, no core changes. Structured KV and auto-extraction land in v1.1.
+
+Memory injects only into the orchestrator's system prompt — never into specialists. ARCHITECTURE invariant #4 (subagents don't inherit parent context) keeps that boundary clean: anything a specialist needs is passed via the `Agent` tool's `prompt` arg by the orchestrator at runtime.
+
 Subagents don't inherit parent skills. Each pack lists which skills its specialists need.
 
 ---

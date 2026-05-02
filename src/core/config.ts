@@ -9,6 +9,12 @@ const EnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   NIATO_AUTH: z.literal("subscription").optional(),
   NIATO_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  // Tier 2 long-term memory: identifies which per-user fact file to load
+  // from the configured MemoryStore. Resolution order at createNiato():
+  // NiatoOptions.memory.userId → Config.NIATO_USER_ID → "default".
+  // One Niato instance is one user (personal companion shape); userId
+  // is NOT accepted per-turn on niato.run().
+  NIATO_USER_ID: z.string().default("default"),
 });
 
 export type Config = z.infer<typeof EnvSchema>;

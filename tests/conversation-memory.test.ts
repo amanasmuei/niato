@@ -37,7 +37,11 @@ describe("conversation memory (v0.4)", () => {
       packs: [genericPack],
       classifier: stubClassifier,
       orchestratorRunner: stubRun,
-      config: { ANTHROPIC_API_KEY: "sk-test", NIATO_LOG_LEVEL: "info" },
+      config: {
+        ANTHROPIC_API_KEY: "sk-test",
+        NIATO_LOG_LEVEL: "info",
+        NIATO_USER_ID: "default",
+      },
     });
 
     const turn1 = await niato.run("turn one");
@@ -57,7 +61,11 @@ describe("conversation memory (v0.4)", () => {
       packs: [genericPack],
       classifier: stubClassifier,
       orchestratorRunner: stubRun,
-      config: { ANTHROPIC_API_KEY: "sk-test", NIATO_LOG_LEVEL: "info" },
+      config: {
+        ANTHROPIC_API_KEY: "sk-test",
+        NIATO_LOG_LEVEL: "info",
+        NIATO_USER_ID: "default",
+      },
     });
 
     await niato.run("a");
