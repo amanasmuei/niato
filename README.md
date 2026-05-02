@@ -477,7 +477,6 @@ git push origin master vX.Y.Z
 
 - Eval baselines (`pnpm eval <pack> --write-baseline`) — needs API budget; CI gate is wired and waiting.
 - Long-term cross-session memory — per-user KV store (Level 3 in `ARCHITECTURE.md` §9).
-- TUI multi-turn history dashboard — extend `pnpm dev:tui` to a scrollable session view.
 - Distributed tracing adapters — `onTurnComplete` is the integration point; OTel/Datadog adapters are per-deployment.
 - `pr_creator` specialist + `protectedBranchGate` hook — needs real GitHub MCP wiring.
 

@@ -6,6 +6,7 @@ import { Launcher, type LauncherChoice } from "./screens/launcher.js";
 import { Session } from "./screens/session.js";
 import { Settings } from "./screens/settings.js";
 import { About } from "./screens/about.js";
+import { History } from "./screens/history.js";
 import { FirstRun } from "./screens/first-run.js";
 import { ApiKeyEntry } from "./screens/api-key-entry.js";
 import { CompanionWizard } from "./screens/companion-wizard.js";
@@ -144,6 +145,8 @@ export function App({
         mode: recent.mode,
         replayedTurns: replayed,
       });
+    } else if (choice === "history") {
+      stack.push("history", {});
     } else if (choice === "settings") {
       stack.push("settings", {});
     } else if (choice === "about") {
@@ -237,6 +240,9 @@ export function App({
   }
   if (screen.name === "about") {
     return <About version={version} onBack={stack.pop} />;
+  }
+  if (screen.name === "history") {
+    return <History sessionsDir={sessionsDir} onBack={stack.pop} />;
   }
   if (screen.name === "mode-prompt") {
     return (

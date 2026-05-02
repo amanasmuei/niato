@@ -3,7 +3,13 @@ import { Box, Text } from "ink";
 import { Menu, type MenuItem } from "../components/menu.js";
 import { type Companion } from "../../companion-config.js";
 
-export type LauncherChoice = "new" | "resume" | "settings" | "about" | "quit";
+export type LauncherChoice =
+  | "new"
+  | "resume"
+  | "history"
+  | "settings"
+  | "about"
+  | "quit";
 
 export interface LauncherProps {
   companion: Companion;
@@ -21,10 +27,16 @@ function timeOfDay(date: Date = new Date()): string {
 }
 
 // Narrow the menu's emitted string id back into the LauncherChoice union
-// without a blind `as` cast. Anything outside the four menu ids falls
+// without a blind `as` cast. Anything outside the five menu ids falls
 // back to "quit" (which is what cancelling/escape does anyway).
 function toChoice(id: string): LauncherChoice {
-  if (id === "new" || id === "resume" || id === "settings" || id === "about") {
+  if (
+    id === "new" ||
+    id === "resume" ||
+    id === "history" ||
+    id === "settings" ||
+    id === "about"
+  ) {
     return id;
   }
   return "quit";
@@ -50,6 +62,7 @@ export function Launcher({
   const items: MenuItem[] = [
     { id: "new", label: "New session" },
     resumeItem,
+    { id: "history", label: "History" },
     { id: "settings", label: "Settings" },
     { id: "about", label: "About" },
   ];
