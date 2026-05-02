@@ -505,6 +505,7 @@ git push origin master vX.Y.Z
 
 **Shipped (post-1.0):**
 
+- Auth UX hardening (v1.2.0) — `niato login` now persists the choice (no more "logged in but logged out"), `niato setup-token` for CI / headless via `CLAUDE_CODE_OAUTH_TOKEN`, three auth paths documented in priority order.
 - Eval baselines committed for all three packs (`generic` 20/20, `support` 23/25, `dev_tools` 25/25). CI gate active via `pnpm eval <pack> --baseline`.
 - Long-term cross-session memory — file-based default at `~/.niato/memory/<userId>.json` with a thin `MemoryStore` interface for plugging in Redis/Postgres later.
 - TUI multi-turn history dashboard — scrollable session view in the launcher.

@@ -1,6 +1,6 @@
 {
   "name": "@aman_asmuei/niato",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Intent-routing agent on the Claude Agent SDK. Niato — \"intention\", from the Malay/Indonesian niat — declares before it acts.",
   "type": "module",
   "main": "./dist/index.js",
@@ -28,6 +28,7 @@
     "tui": "tsx --env-file=.env src/cli/tui/index.tsx",
     "chat": "tsx --env-file=.env src/cli-chat.ts",
     "login": "tsx src/cli-login.ts",
+    "setup-token": "tsx src/cli-setup-token.ts",
     "build": "tsc -p tsconfig.build.json && node scripts/copy-prompts.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

@@ -2,6 +2,33 @@
 
 All notable changes to Niato, since v0.2.0 (the first publishable release).
 
+## v1.2.0 — 2026-05-02
+
+Auth UX hardening + a third auth path. All additive — no breaking changes.
+
+### Added
+- **`niato setup-token` subcommand** — wraps `claude setup-token` to surface long-lived OAuth tokens for CI / scripts / containers / any environment where interactive browser login isn't available. Token is printed by Claude Code to terminal; niato deliberately does NOT capture or persist it (Anthropic policy). New entry: `src/cli/setup-token.ts` + `src/cli-setup-token.ts`; registered in `src/cli/dispatch.ts`.
+- **`CLAUDE_CODE_OAUTH_TOKEN` recognized as a third `AuthMode`.** The Agent SDK already reads it natively (`sdk.mjs`); niato's `resolveAuthMode` previously only knew `ANTHROPIC_API_KEY` and `NIATO_AUTH=subscription`, so users with the SDK-blessed token would still hit "no auth configured." Now classified as `"oauth_token"` with documented priority: token > NIATO_AUTH > API key > throw.
+- **`isAuthConfigured()` predicate** in `src/cli/tui/auth-env.ts` — boolean over file OR any of the three env vars. Used by the TUI initial-screen gate so shell-level env-var auth doesn't get routed unnecessarily through first-run.
+- **`pnpm setup-token`** dev script for parity with `pnpm login`.
+
+### Fixed
+- **`niato login` UX cascade** (the bug Aman hit on first install). Three root causes:
+  - `niato login` shelled out to `claude /login` but never persisted the user's auth choice. Next `niato` run threw "no auth configured." Now writes `~/.niato/auth.json` with `{ mode: "subscription" }` after exit-0, so `applyPersistedAuthEnv()` has something to bridge.
+  - Login success message said `"Try: pnpm chat"` (dev-repo wording) instead of `"Try: niato"` (installed-package wording). Fixed.
+  - Throw inside `useNiatoSession`'s `useState` initializer escaped React/Ink and surfaced the error 3-4 times with leaked `/opt/homebrew/...` install paths. The TUI initial-screen gate now refuses to mount Session without auth — routes through first-run instead.
+- **Latent regression from v1.1.0 gating** — users with `ANTHROPIC_API_KEY` set in shell but no `~/.niato/auth.json` were unnecessarily routed through first-run on every launch. The new `isAuthConfigured()` predicate fixes that for all three env-var paths.
+- **Non-TUI entries (`pnpm dev`, `pnpm dev:multi`, `niato chat`)** now also call `applyPersistedAuthEnv()`. Previously only the TUI entry did, so users who ran `niato login` then `niato chat` hit the same "no auth configured" throw.
+
+### Changed
+- `AuthMode` union extended: `"api_key" | "oauth_subscription" | "oauth_token"`.
+- `resolveAuthMode` error message rewritten to name the niato commands that drive each path (`niato login`, `niato setup-token`) alongside the env vars.
+- README Authentication section now documents all three paths in priority order with use-case framing (laptop / CI / production). Quick start updated similarly.
+- `helpText()` in `src/cli/dispatch.ts` rewritten to surface `niato setup-token` and the auth-path table.
+
+### Internal
+- Refactored `src/cli-login.ts` into a thin script around `runLogin(io)` in `src/cli/login.ts` for testability. Same shape applied to `setup-token`.
+
 ## v1.1.0 — 2026-05-02
 
 Four post-1.0 backlog items shipped together. All additive — no breaking changes.
