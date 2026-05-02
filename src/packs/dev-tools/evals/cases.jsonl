@@ -23,3 +23,8 @@
 {"input": "Look at the code and fix whatever's wrong with it.", "expected": {"domain": "dev_tools", "intent": "fix_bug"}, "notes": "boundary: vague but action-oriented; only fix_bug involves changes"}
 {"input": "Why is this test failing?", "expected": {"domain": "dev_tools", "intent": "fix_bug"}, "notes": "boundary: 'why failing' surface but a failing test usually wants a patch — fix_bug over debug_ci"}
 {"input": "Walk me through how the auth flow is implemented.", "expected": {"domain": "dev_tools", "intent": "explain_code"}, "notes": "boundary: 'walk me through' is explainer; surface 'how implemented' could be find_code but the dominant intent is explanation"}
+{"input": "Open a PR for the OAuth fix on branch feat/oauth-redirect into develop.", "expected": {"domain": "dev_tools", "intent": "create_pr"}, "notes": "explicit PR open with branches"}
+{"input": "Create a pull request from feat/refund-flow to main titled 'Fix refund retry'.", "expected": {"domain": "dev_tools", "intent": "create_pr"}, "notes": "explicit base/head/title — protected base will trip the hook"}
+{"input": "Please open a pull request for my session-store rewrite.", "expected": {"domain": "dev_tools", "intent": "create_pr"}, "notes": "underspecified PR open — still create_pr intent"}
+{"input": "Submit a PR for the changes on bugfix/cache-leak.", "expected": {"domain": "dev_tools", "intent": "create_pr"}, "notes": "informal phrasing"}
+{"input": "Raise a PR from chore/upgrade-deps targeting develop.", "expected": {"domain": "dev_tools", "intent": "create_pr"}, "notes": "British 'raise a PR' phrasing"}

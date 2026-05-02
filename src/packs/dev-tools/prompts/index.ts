@@ -17,3 +17,4 @@ export const CODEBASE_SEARCH_PROMPT = loadPrompt("codebase_search");
 export const CODE_EXPLAINER_PROMPT = loadPrompt("code_explainer");
 export const BUG_FIXER_PROMPT = loadPrompt("bug_fixer");
 export const CI_DEBUGGER_PROMPT = loadPrompt("ci_debugger");
+export const PR_CREATOR_PROMPT = loadPrompt("pr_creator");

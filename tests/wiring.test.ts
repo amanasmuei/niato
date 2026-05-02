@@ -82,6 +82,7 @@ describe("mergePackAgents", () => {
       "dev_tools.ci_debugger",
       "dev_tools.code_explainer",
       "dev_tools.codebase_search",
+      "dev_tools.pr_creator",
       "generic.action",
       "generic.escalate",
       "generic.retrieval",
@@ -254,6 +255,7 @@ describe("devToolsPack.route", () => {
     ["explain_code", "code_explainer"],
     ["fix_bug", "bug_fixer"],
     ["debug_ci", "ci_debugger"],
+    ["create_pr", "pr_creator"],
   ])("maps %s → %s", (intent, expected) => {
     expect(
       devToolsPack.route({
@@ -264,19 +266,20 @@ describe("devToolsPack.route", () => {
     ).toBe(expected);
   });
 
-  it("returns null for unknown intents (e.g. create_pr deferred to a later phase)", () => {
+  it("returns null for unknown intents", () => {
     expect(
       devToolsPack.route({
-        intent: "create_pr",
+        intent: "merge_pr",
         domain: "dev_tools",
         confidence: 1,
       }),
     ).toBeNull();
   });
 
-  it("declares the four Phase 5 Dev Tools intents (create_pr deferred)", () => {
+  it("declares the five Dev Tools intents", () => {
     const intentNames = devToolsPack.intents.map((i) => i.name).sort();
     expect(intentNames).toEqual([
+      "create_pr",
       "debug_ci",
       "explain_code",
       "find_code",

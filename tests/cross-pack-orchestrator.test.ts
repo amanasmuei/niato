@@ -83,8 +83,8 @@ describe("pickAdditionalRecommendations", () => {
         domain: "dev_tools",
         confidence: 0.9,
         secondary: [
-          // dev_tools doesn't ship `create_pr` (deferred to a later phase)
-          { intent: "create_pr", domain: "dev_tools", confidence: 0.9 },
+          // dev_tools doesn't ship a `merge_pr` intent — only create_pr.
+          { intent: "merge_pr", domain: "dev_tools", confidence: 0.9 },
         ],
       }),
     );
