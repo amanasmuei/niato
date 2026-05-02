@@ -49,16 +49,25 @@ function previewText(value: unknown, max: number): string {
 // safe to call repeatedly (e.g. on every render in tests). Production
 // callers stream incrementally via runOrchestrator's onEvent callback;
 // this batch form exists for tests and for retroactive replay.
+//
+// Coverage note: this translator handles the SDK-derived event subset
+// (specialist_dispatched, tool_call, tool_result). Lifecycle events
+// (turn_start, classified, turn_complete) and approval events
+// (approval_requested, approval_resolved) are emitted out-of-band by
+// runOrchestrator (Task 3) and ApprovalChannel (Task 2) respectively.
+//
+// Blocked-tool dedup: a hook-denied tool call can surface twice — once
+// as an `is_error: true` tool_result (outcome: "error") and once via
+// `permission_denials` (outcome: "blocked") — sharing the same
+// `toolUseId`. The translator emits both faithfully; downstream
+// consumers should dedupe by `toolUseId` if displaying a single row
+// per tool call.
 export function messagesToEvents(messages: SDKMessage[]): NiatoEvent[] {
   const events: NiatoEvent[] = [];
   for (const msg of messages) {
     if (msg.type === "assistant") {
-      // Cast: SDKMessage assistant union has narrower typing than the
-      // wire shape; we use the documented runtime properties.
-      const parent = (msg as { parent_tool_use_id: string | null })
-        .parent_tool_use_id;
-      const content: unknown = (msg as { message: { content: unknown } })
-        .message.content;
+      const parent = msg.parent_tool_use_id;
+      const content: unknown = msg.message.content;
       if (!Array.isArray(content)) continue;
       for (const block of content) {
         if (!isToolUseBlock(block)) continue;
@@ -82,8 +91,7 @@ export function messagesToEvents(messages: SDKMessage[]): NiatoEvent[] {
         }
       }
     } else if (msg.type === "user") {
-      const content: unknown = (msg as { message: { content: unknown } })
-        .message.content;
+      const content: unknown = msg.message.content;
       if (!Array.isArray(content)) continue;
       for (const block of content) {
         if (!isToolResultBlock(block)) continue;
@@ -96,17 +104,16 @@ export function messagesToEvents(messages: SDKMessage[]): NiatoEvent[] {
         });
       }
     } else if (msg.type === "result") {
-      const denials = (
-        msg as { permission_denials?: { tool_name: string; tool_use_id: string }[] }
-      ).permission_denials;
-      if (!Array.isArray(denials)) continue;
+      if (msg.subtype !== "success" && msg.subtype !== "error_during_execution")
+        continue;
+      const denials = msg.permission_denials;
       for (const d of denials) {
         if (typeof d.tool_use_id !== "string") continue;
         events.push({
           type: "tool_result",
           toolUseId: d.tool_use_id,
           outcome: "blocked",
-          preview: d.tool_name,
+          preview: previewJson(d.tool_input, 120),
           reason: undefined,
         });
       }

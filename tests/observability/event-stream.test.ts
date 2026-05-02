@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { messagesToEvents } from "../../src/observability/event-stream.js";
+import { expectDefined } from "../cli/tui/_helpers/expect-defined.js";
 
 // Minimal SDK-shaped fixtures. The orchestrator dispatches one specialist
 // (Agent tool, parent_tool_use_id=null), the specialist runs one tool
@@ -108,5 +109,89 @@ describe("messagesToEvents", () => {
       toolUseId: "tu_3",
       outcome: "blocked",
     });
+  });
+
+  it("inputPreview is capped at 80 chars with ellipsis for oversize JSON", () => {
+    const longInput = { file_path: "x".repeat(200) };
+    const messages: SDKMessage[] = [
+      asAssistantMessage("tu_1", [
+        {
+          type: "tool_use",
+          id: "tu_2",
+          name: "Read",
+          input: longInput,
+        },
+      ]),
+    ];
+    const events = messagesToEvents(messages);
+    const toolCall = expectDefined(
+      events.find((e) => e.type === "tool_call"),
+      "expected tool_call event",
+    );
+    expect(toolCall.inputPreview.length).toBe(80);
+    expect(toolCall.inputPreview.endsWith("…")).toBe(true);
+  });
+
+  it("preview is capped at 120 chars with ellipsis for oversize tool result", () => {
+    const messages: SDKMessage[] = [
+      asUserToolResult("tu_2", "x".repeat(500)),
+    ];
+    const events = messagesToEvents(messages);
+    const result = expectDefined(
+      events.find((e) => e.type === "tool_result"),
+      "expected tool_result event",
+    );
+    expect(result.preview.length).toBe(120);
+    expect(result.preview.endsWith("…")).toBe(true);
+  });
+
+  it("emits tool_result with outcome=error when is_error is true", () => {
+    const messages: SDKMessage[] = [
+      {
+        type: "user",
+        parent_tool_use_id: null,
+        message: {
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "tu_4",
+              content: "boom",
+              is_error: true,
+            },
+          ],
+        },
+      } as unknown as SDKMessage,
+    ];
+    const events = messagesToEvents(messages);
+    expect(events).toEqual([
+      {
+        type: "tool_result",
+        toolUseId: "tu_4",
+        outcome: "error",
+        preview: "boom",
+        reason: undefined,
+      },
+    ]);
+  });
+
+  it("treats legacy 'Task' tool name as a specialist dispatch alias for 'Agent'", () => {
+    const messages: SDKMessage[] = [
+      asAssistantMessage(null, [
+        {
+          type: "tool_use",
+          id: "tu_5",
+          name: "Task",
+          input: { subagent_type: "support.refund_processor", prompt: "go" },
+        },
+      ]),
+    ];
+    const events = messagesToEvents(messages);
+    expect(events).toEqual([
+      {
+        type: "specialist_dispatched",
+        toolUseId: "tu_5",
+        specialist: "support.refund_processor",
+      },
+    ]);
   });
 });

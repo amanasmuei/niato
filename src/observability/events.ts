@@ -56,8 +56,11 @@ export interface NiatoToolResultEvent {
   // Capped to 120 chars; UI shows preview, full content available via
   // SDK message inspection.
   preview: string;
-  // Populated for `outcome === "blocked"` with the hook's
-  // permissionDecisionReason. `undefined` otherwise.
+  // For blocked outcomes: populated by upstream emitters (e.g.
+  // runOrchestrator's PreToolUse hook reason via
+  // PreToolUseHookSpecificOutput.permissionDecisionReason). The pure
+  // SDKMessage translator leaves this `undefined` because
+  // SDKPermissionDenial carries no reason field.
   reason: string | undefined;
 }
 
